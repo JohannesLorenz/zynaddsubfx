@@ -33,6 +33,8 @@ namespace zyn {
 /**The "additive" synthesizer*/
 class ADnote:public SynthNote
 {
+        typedef float (*base_func)(float, float);
+
     public:
         /**Constructor.
          * @param pars Note Parameters
@@ -101,6 +103,8 @@ class ADnote:public SynthNote
         inline void ComputeVoiceOscillatorFrequencyModulation(int nvoice,
                                                               FMTYPE FMmode);
         //  inline void ComputeVoiceOscillatorFrequencyModulation(int nvoice);
+        /**Computes the WaveTable Modulated Oscillator.*/
+        inline void ComputeVoiceOscillatorWaveTableModulation(int nvoice);
         /**TODO*/
         inline void ComputeVoiceOscillatorPitchModulation(int nvoice);
 
@@ -191,6 +195,8 @@ class ADnote:public SynthNote
 
             /* Waveform of the Voice */
             float *OscilSmp;
+            base_func basefunc = nullptr; //!< bypass for wavetable modulation
+            float basefuncpar; //! [0,1.0]
 
             /* preserved for phase mod PWM emulation. */
             int phase_offset;
@@ -243,13 +249,19 @@ class ADnote:public SynthNote
 
             unsigned char FMFreqFixed;
 
+            //! if >= 0, number of the voice which functions as modulator
             int FMVoice;
+            //! max-normalise factor for the modulator
+            //! We usually assumed that the modulator would be in range [-0.5, 0.5].
+            //! However, this is not always true
+            float normalise_modulator = 1.0f;
 
             // Voice Output used by other voices if use this as modullator
             float *VoiceOut;
 
             /* Wave of the Voice */
             float *FMSmp;
+            float FMSmpMax;
 
             smooth_float FMVolume;
             float FMDetune;  //in cents
@@ -314,6 +326,10 @@ class ADnote:public SynthNote
         float  *tmpwavel;
         float  *tmpwaver;
         int     max_unison;
+
+        //! Array of buffers, one for each unison wave
+        //! These are the waves computed before modulation
+        //! (however, they are also modified while computing the modulation)
         float **tmpwave_unison;
 
         //Filter bypass samples
