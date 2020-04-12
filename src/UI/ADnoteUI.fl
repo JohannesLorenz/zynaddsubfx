@@ -80,32 +80,6 @@ decl {\#include "MasterUI.h"} {private local
 } 
 
 decl {extern class MasterUI *ui;} {private local
-} 
-
-class PhaseSlider {: {public Fl_Osc_TSlider}
-} {
-  Function {PhaseSlider(int x,int y, int w, int h, const char *label=0)
-  :Fl_Osc_TSlider(x,y,w,h,label)} {open
-  } { code {
-  set_rounding(1);
-  reset_value=0;
-  set_transform([](float x){return 180.0f*x/64.0f;});
-  } {}}
-  Function {set_scope(Fl_Oscilloscope *newscope)} {
-  } { code { oscope = newscope; } {} }
-   Function {OSC_value(int i)} {open return_type void
-   } { code {
-       value(64-i);
-       oscope->phase=i;
-       oscope->parent()->redraw();
-   } {} }
-  Function {cb(void)} {open return_type void
-  } { code {
-        oscWrite(ext, "i", (int)(64-Fl_Slider::value()));
-        if(cb_data.first)
-            cb_data.first(this, cb_data.second);
-} {} }
-   decl {Fl_Oscilloscope *oscope = NULL; } {private local}
 }
 
 
