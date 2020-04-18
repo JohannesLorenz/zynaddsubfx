@@ -16,6 +16,7 @@
 
 #include "../globals.h"
 
+#include "ModulatorParameters.h"
 #include "Presets.h"
 #include <string>
 #include <vector>
@@ -33,7 +34,7 @@ namespace zyn {
  * The ownership will be unclear for the time being, but it should be made more
  * explicit with time.
  */
-class PADnoteParameters:public Presets
+class PADnoteParameters:public Presets, public ModulatorParameters
 {
     public:
         PADnoteParameters(const SYNTH_T &synth_, FFTwrapper *fft_,
@@ -121,6 +122,7 @@ class PADnoteParameters:public Presets
         unsigned short int PDetune; //fine detune
         unsigned short int PCoarseDetune; //coarse detune+octave
         unsigned char      PDetuneType; //detune type
+        const unsigned char* const GlobalPDetuneType; //hack (TODO: describe)
 
         EnvelopeParams *FreqEnvelope; //Frequency Envelope
         LFOParams      *FreqLfo; //Frequency LFO

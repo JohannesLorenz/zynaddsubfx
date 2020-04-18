@@ -84,7 +84,6 @@ void PADnote::setup(float velocity_,
         NoteGlobalPar.Detune = getdetune(pars.PDetuneType, pars.PCoarseDetune,
                                          pars.PDetune);
 
-
     //find out the closest note
     const float log2freq = note_log2_freq + NoteGlobalPar.Detune / 1200.0f;
     float mindist = fabsf(log2freq - log2f(pars.sample[0].basefreq + 0.0001f));

@@ -41,6 +41,18 @@ static const rtosc::Ports realtime_ports =
     rRecurp(AmpEnvelope, "Amplitude Envelope"),
     rRecurp(FilterEnvelope, "Filter Envelope"),
     rRecurp(GlobalFilter, "Post Filter"),
+    MODULATOR_PARAMS_RECUR,
+    {"FMSmp/", rDoc("Modulating Oscillator"),
+        &OscilGen::ports,
+        rBOIL_BEGIN
+            if(obj->FMSmp == NULL) return;
+        data.obj = obj->FMSmp;
+        SNIP
+            OscilGen::realtime_ports.dispatch(msg, data);
+        rBOIL_END},
+
+    //Modulator
+    MODULATOR_PARAMS_DIRECT,
 
     //Wave
     // Pwavepos is just a "wheel", where you can change the oscilgen parameter "live"
@@ -169,6 +181,17 @@ static const rtosc::Ports non_realtime_ports =
         o.paste(paste);
         //avoid the match to forward the request along
         d.matches--;}},
+
+    //Modulator
+    {"FMSmp/", rDoc("Modulating Oscillator"),
+        &OscilGen::ports,
+        rBOIL_BEGIN
+            if(obj->FMSmp == NULL) return;
+        data.obj = obj->FMSmp;
+        SNIP
+            OscilGen::non_realtime_ports.dispatch(msg, data);
+        rBOIL_END},
+
     //Harmonic Source Distribution
     rRecurp(oscilgen, "Oscillator"),
     rRecurp(resonance, "Resonance"),
@@ -325,7 +348,9 @@ const rtosc::MergePorts PADnoteParameters::ports =
 
 PADnoteParameters::PADnoteParameters(const SYNTH_T &synth_, FFTwrapper *fft_,
                                      const AbsTime *time_)
-        : Presets(), time(time_), last_update_timestamp(0), synth(synth_)
+        : Presets(),
+          GlobalPDetuneType(&PDetuneType),
+          time(time_), last_update_timestamp(0), synth(synth_)
 {
     setpresettype("Ppadsynth");
 
@@ -352,6 +377,8 @@ PADnoteParameters::PADnoteParameters(const SYNTH_T &synth_, FFTwrapper *fft_,
             ptr = nullptr;
     }
 
+    ModulatorParameters::enable(synth, fft_, time);
+
     defaults();
 }
 
@@ -368,6 +395,8 @@ PADnoteParameters::~PADnoteParameters()
     delete (GlobalFilter);
     delete (FilterEnvelope);
     delete (FilterLfo);
+
+    ModulatorParameters::kill();
 }
 
 void PADnoteParameters::defaults()
@@ -435,6 +464,8 @@ void PADnoteParameters::defaults()
     GlobalFilter->defaults();
     FilterEnvelope->defaults();
     FilterLfo->defaults();
+
+    ModulatorParameters::defaults();
 
     deletesamples();
 }
@@ -1400,6 +1431,8 @@ void PADnoteParameters::paste(PADnoteParameters &x)
 
     oscilgen->paste(*x.oscilgen);
     resonance->paste(*x.resonance);
+
+    ModulatorParameters::paste(x);
 
     if ( time ) {
         last_update_timestamp = time->time();

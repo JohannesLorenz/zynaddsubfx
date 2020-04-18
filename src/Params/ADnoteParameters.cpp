@@ -59,14 +59,13 @@ static const Ports voicePorts = {
         if(data.matches == 0)
             data.forward();
         rBOIL_END},
+    MODULATOR_PARAMS_RECUR,
     rRecurp(FreqLfo, "Frequency LFO"),
     rRecurp(AmpLfo, "Amplitude LFO"),
     rRecurp(FilterLfo, "Filter LFO"),
     rRecurp(FreqEnvelope,   "Frequency Envelope"),
     rRecurp(AmpEnvelope,    "Amplitude Envelope"),
     rRecurp(FilterEnvelope, "Filter Envelope"),
-    rRecurp(FMFreqEnvelope, "Modulator Frequency Envelope"),
-    rRecurp(FMAmpEnvelope,  "Modulator Amplitude Envelope"),
     rRecurp(VoiceFilter,    "Optional Voice Filter"),
 
 //    rToggle(Enabled,       rShort("enable"), "Voice Enable"),
@@ -93,12 +92,8 @@ static const Ports voicePorts = {
         "Resonance Enable"),
     rParamI(Pextoscil,       rDefault(-1),     rShort("ext."),
             rMap(min, -1), rMap(max, 16), "External Oscillator Selection"),
-    rParamI(PextFMoscil,     rDefault(-1),     rShort("ext."),
-            rMap(min, -1), rMap(max, 16), "External FM Oscillator Selection"),
     rParamZyn(Poscilphase,   rShort("phase"),  rDefault(64),
         "Oscillator Phase"),
-    rParamZyn(PFMoscilphase, rShort("phase"),  rDefault(64),
-        "FM Oscillator Phase"),
     rToggle(Pfilterbypass,   rShort("bypass"), rDefault(false),
         "Filter Bypass"),
 
@@ -174,33 +169,7 @@ static const Ports voicePorts = {
 
  
     //Modulator Stuff
-    rOption(PFMEnabled, rShort("mode"), rOptions(none, mix, ring, phase,
-                frequency, pulse), rDefault(none), "Modulator mode"),
-    rParamI(PFMVoice,                   rShort("voice"), rDefault(-1),
-        "Modulator Oscillator Selection"),
-    rParamF(FMvolume,                   rShort("vol."),  rLinear(0.0, 100.0),
-        rDefault(70.0),                 "Modulator Magnitude"),
-    rParamZyn(PFMVolumeDamp,            rShort("damp."), rDefault(64),
-        "Modulator HF dampening"),
-    rParamZyn(PFMVelocityScaleFunction, rShort("sense"), rDefault(64),
-        "Modulator Velocity Function"),
-    //nominally -8192..8191
-    rParamI(PFMDetune,                  rShort("fine"),
-            rLinear(0, 16383), rDefault(8192), "Modulator Fine Detune"),
-    rParamI(PFMCoarseDetune,            rShort("coarse"), rDefault(0),
-            "Modulator Coarse Detune"),
-    rParamZyn(PFMDetuneType,            rShort("type"),
-              rOptions(L35cents, L10cents, E100cents, E1200cents),
-              rDefault(L35cents),
-              "Modulator Detune Magnitude"),
-    rToggle(PFMFixedFreq,               rShort("fixed"),  rDefault(false),
-            "Modulator Frequency Fixed"),
-    rToggle(PFMFreqEnvelopeEnabled,  rShort("enable"), rDefault(false),
-            "Modulator Frequency Envelope"),
-    rToggle(PFMAmpEnvelopeEnabled,   rShort("enable"), rDefault(false),
-            "Modulator Amplitude Envelope"),
-
-
+    MODULATOR_PARAMS_DIRECT,
 
     //weird stuff for PCoarseDetune
     {"detunevalue:",  rMap(unit,cents) rDoc("Get detune in cents"), NULL,
@@ -249,65 +218,6 @@ static const Ports voicePorts = {
                 int k=(int) rtosc_argument(msg, 0).i;
                 if (k<0) k+=1024;
                 obj->PCoarseDetune = k + (obj->PCoarseDetune/1024)*1024;
-                d.broadcast(d.loc, "i", get_coarse());
-            }
-        }},
-    {"PFMVolume::i", rShort("vol.") rLinear(0,127)
-        rDoc("Modulator Magnitude"), NULL,
-        [](const char *msg, RtData &d)
-        {
-            rObject *obj = (rObject *)d.obj;
-            if (!rtosc_narguments(msg))
-                d.reply(d.loc, "i", (int)roundf(127.0f * obj->FMvolume
-                    / 100.0f));
-            else
-                obj->FMvolume = 100.0f * rtosc_argument(msg, 0).i / 127.0f;
-        }},
-    //weird stuff for PCoarseDetune
-    {"FMdetunevalue:", rMap(unit,cents) rDoc("Get modulator detune"), NULL, [](const char *, RtData &d)
-        {
-            rObject *obj = (rObject *)d.obj;
-            unsigned detuneType =
-            obj->PFMDetuneType == 0 ? *(obj->GlobalPDetuneType)
-            : obj->PFMDetuneType;
-            //TODO check if this is accurate or if PCoarseDetune is utilized
-            //TODO do the same for the other engines
-            d.reply(d.loc, "f", getdetune(detuneType, 0, obj->PFMDetune));
-        }},
-    {"FMoctave::c:i", rProp(parameter) rShort("octave") rLinear(-8,7) rDoc("Octave note offset for modulator"), NULL,
-        [](const char *msg, RtData &d)
-        {
-            rObject *obj = (rObject *)d.obj;
-            auto get_octave = [&obj](){
-                int k=obj->PFMCoarseDetune/1024;
-                if (k>=8) k-=16;
-                return k;
-            };
-            if(!rtosc_narguments(msg)) {
-                d.reply(d.loc, "i", get_octave());
-            } else {
-                int k=(int) rtosc_argument(msg, 0).i;
-                if (k<0) k+=16;
-                obj->PFMCoarseDetune = k*1024 + obj->PFMCoarseDetune%1024;
-                d.broadcast(d.loc, "i", get_octave());
-            }
-        }},
-    {"FMcoarsedetune::c:i", rProp(parameter) rShort("coarse") rLinear(-64,63)
-        rDoc("Coarse note detune for modulator"),
-        NULL, [](const char *msg, RtData &d)
-        {
-            rObject *obj = (rObject *)d.obj;
-            auto get_coarse = [&obj](){
-                int k=obj->PFMCoarseDetune%1024;
-                if (k>=512) k-=1024;
-                return k;
-            };
-            if(!rtosc_narguments(msg)) {
-                d.reply(d.loc, "i", get_coarse());
-            } else {
-                int k=(int) rtosc_argument(msg, 0).i;
-                if (k<0) k+=1024;
-                obj->PFMCoarseDetune = k + (obj->PFMCoarseDetune/1024)*1024;
                 d.broadcast(d.loc, "i", get_coarse());
             }
         }},
@@ -565,9 +475,7 @@ void ADnoteVoiceParam::defaults()
     Presonance    = 1;
     Pfilterbypass = 0;
     Pextoscil     = -1;
-    PextFMoscil   = -1;
     Poscilphase   = 64;
-    PFMoscilphase = 64;
     PDelay                    = 0;
     volume                    = -60.0f* (1.0f - 100.0f / 127.0f);
     PVolumeminus              = 0;
@@ -586,23 +494,8 @@ void ADnoteVoiceParam::defaults()
     PFilterLfoEnabled         = 0;
     PFilterVelocityScale = 0;
     PFilterVelocityScaleFunction = 64;
-    PFMEnabled                = FMTYPE::NONE;
-    PFMFixedFreq              = false;
-
-    //I use the internal oscillator (-1)
-    PFMVoice = -1;
-
-    FMvolume       = 70.0;
-    PFMVolumeDamp   = 64;
-    PFMDetune       = 8192;
-    PFMCoarseDetune = 0;
-    PFMDetuneType   = 0;
-    PFMFreqEnvelopeEnabled   = 0;
-    PFMAmpEnvelopeEnabled    = 0;
-    PFMVelocityScaleFunction = 64;
 
     OscilSmp->defaults();
-    FMSmp->defaults();
 
     AmpEnvelope->defaults();
     AmpLfo->defaults();
@@ -614,8 +507,7 @@ void ADnoteVoiceParam::defaults()
     FilterEnvelope->defaults();
     FilterLfo->defaults();
 
-    FMFreqEnvelope->defaults();
-    FMAmpEnvelope->defaults();
+    ModulatorParameters::defaults();
 }
 
 
@@ -633,7 +525,6 @@ void ADnoteVoiceParam::enable(const SYNTH_T &synth, FFTwrapper *fft,
                               Resonance *Reson, const AbsTime *time)
 {
     OscilSmp = new OscilGen(synth, fft, Reson);
-    FMSmp    = new OscilGen(synth, fft, NULL);
 
     AmpEnvelope = new EnvelopeParams(64, 1, time);
     AmpEnvelope->init(ad_voice_amp);
@@ -648,10 +539,7 @@ void ADnoteVoiceParam::enable(const SYNTH_T &synth, FFTwrapper *fft,
     FilterEnvelope->init(ad_voice_filter);
     FilterLfo = new LFOParams(ad_voice_filter, time);
 
-    FMFreqEnvelope = new EnvelopeParams(0, 0, time);
-    FMFreqEnvelope->init(ad_voice_fm_freq);
-    FMAmpEnvelope = new EnvelopeParams(64, 1, time);
-    FMAmpEnvelope->init(ad_voice_fm_amp);
+    ModulatorParameters::enable(synth, fft, time);
 }
 
 /*
@@ -689,7 +577,6 @@ void ADnoteParameters::KillVoice(int nvoice)
 void ADnoteVoiceParam::kill()
 {
     delete OscilSmp;
-    delete FMSmp;
 
     delete AmpEnvelope;
     delete AmpLfo;
@@ -701,8 +588,7 @@ void ADnoteVoiceParam::kill()
     delete FilterEnvelope;
     delete FilterLfo;
 
-    delete FMFreqEnvelope;
-    delete FMAmpEnvelope;
+    ModulatorParameters::kill();
 }
 
 
@@ -1118,13 +1004,9 @@ void ADnoteVoiceParam::paste(ADnoteVoiceParam &a)
     copy(PDelay);
     copy(Presonance);
     copy(Pextoscil);
-    copy(PextFMoscil);
     copy(Poscilphase);
-    copy(PFMoscilphase);
     copy(PFilterEnabled);
     copy(Pfilterbypass);
-    copy(PFMEnabled);
-    copy(PFMFixedFreq);
 
     RCopy(OscilSmp);
 
@@ -1168,24 +1050,7 @@ void ADnoteVoiceParam::paste(ADnoteVoiceParam &a)
 
     RCopy(FilterLfo);
 
-    copy(PFMVoice);
-    copy(FMvolume);
-    copy(PFMVolumeDamp);
-    copy(PFMVelocityScaleFunction);
-
-    copy(PFMAmpEnvelopeEnabled);
-
-    RCopy(FMAmpEnvelope);
-
-    copy(PFMDetune);
-    copy(PFMCoarseDetune);
-    copy(PFMDetuneType);
-    copy(PFMFreqEnvelopeEnabled);
-
-
-    RCopy(FMFreqEnvelope);
-
-    RCopy(FMSmp);
+    ModulatorParameters::paste(a);
 
     if ( time ) {
         last_update_timestamp = time->time();

@@ -150,12 +150,12 @@ struct ADnoteVoiceParam : public ModulatorParameters {
     /** If the resonance is enabled for this voice */
     unsigned char Presonance;
 
-    // What external oscil should I use, -1 for internal OscilSmp&FMSmp
-    short int Pextoscil, PextFMoscil;
+    // What external oscil should I use, -1 for internal
+    short int Pextoscil;
     // it is not allowed that the externoscil,externFMoscil => current voice
 
-    // oscillator phases
-    unsigned char Poscilphase, PFMoscilphase;
+    // oscillator phase
+    unsigned char Poscilphase;
 
     // filter bypass
     unsigned char Pfilterbypass;
