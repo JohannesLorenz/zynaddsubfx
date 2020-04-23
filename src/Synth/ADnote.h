@@ -17,6 +17,7 @@
 #include "SynthNote.h"
 #include "Envelope.h"
 #include "LFO.h"
+#include "ModulatorNote.h"
 #include "../Params/ADnoteParameters.h"
 #include "../Params/Controller.h"
 #include "WatchPoint.h"
@@ -171,7 +172,7 @@ class ADnote:public SynthNote
         /***********************************************************/
         /*                    VOICE PARAMETERS                     */
         /***********************************************************/
-        struct Voice {
+        struct Voice : public ModulatorNote {
             void releasekey();
             void kill(Allocator &memory, const SYNTH_T &synth);
             /* If the voice is enabled */
@@ -233,29 +234,6 @@ class ADnote:public SynthNote
             ModFilter *Filter;
             Envelope  *FilterEnvelope;
             LFO       *FilterLfo;
-
-
-            /****************************
-            *   MODULLATOR PARAMETERS   *
-            ****************************/
-
-            FMTYPE FMEnabled;
-
-            unsigned char FMFreqFixed;
-
-            int FMVoice;
-
-            // Voice Output used by other voices if use this as modullator
-            float *VoiceOut;
-
-            /* Wave of the Voice */
-            float *FMSmp;
-
-            smooth_float FMVolume;
-            float FMDetune;  //in cents
-
-            Envelope *FMFreqEnvelope;
-            Envelope *FMAmpEnvelope;
 
             /********************************************************/
             /*    INTERNAL VALUES OF THE NOTE AND OF THE VOICES     */

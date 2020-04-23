@@ -4,6 +4,7 @@ set(zynaddsubfx_synth_SRCS
 	Synth/Envelope.cpp
 	Synth/LFO.cpp
     Synth/ModFilter.cpp
+    	Synth/ModulatorNote.cpp
 	Synth/OscilGen.cpp
 	Synth/PADnote.cpp
 	Synth/Resonance.cpp

@@ -111,10 +111,8 @@ void ADnote::setupVoice(int nvoice)
 
     param.OscilSmp->newrandseed(prng());
     voice.OscilSmp = NULL;
-    voice.FMSmp    = NULL;
-    voice.VoiceOut = NULL;
+    voice.setup();
 
-    voice.FMVoice = -1;
     voice.unison_size = 1;
 
     if(!pars.VoicePar[nvoice].Enabled) {
