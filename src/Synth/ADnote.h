@@ -22,13 +22,6 @@
 #include "../Params/Controller.h"
 #include "WatchPoint.h"
 
-//Globals
-
-/**FM amplitude tune*/
-#define FM_AMP_MULTIPLIER 14.71280603f
-
-#define OSCIL_SMP_EXTRA_SAMPLES 5
-
 namespace zyn {
 
 /**The "additive" synthesizer*/
@@ -272,9 +265,6 @@ class ADnote:public SynthNote
                 float *step; //value which increments the position
                 float *position; //between -1.0f and 1.0f
             } unison_vibratto;
-
-            //integer part (skip) of the Modullator
-            unsigned int *oscposhiFM, *oscfreqhiFM;
 
             //used to compute and interpolate the amplitudes of voices and modullators
             float oldamplitude, newamplitude,

@@ -272,6 +272,15 @@ class ADnoteParameters:public PresetsArray
         ADnoteGlobalParam GlobalPar;
         ADnoteVoiceParam  VoicePar[NUM_VOICES];
 
+        ADnoteVoiceParam& getFMVoicePar(std::size_t vce)
+        {
+            const auto& param = VoicePar[vce];
+            int vc = vce;
+            if(param.PextFMoscil != -1)
+                vc = param.PextFMoscil;
+            return VoicePar[vc];
+        }
+
         void defaults();
         void add2XML(XMLwrapper& xml);
         void getfromXML(XMLwrapper& xml);

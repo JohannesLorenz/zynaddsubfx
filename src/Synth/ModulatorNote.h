@@ -4,6 +4,13 @@
 #include "globals.h"
 #include "../Params/ModulatorParameters.h"
 
+//Globals
+
+/**FM amplitude tune*/
+#define FM_AMP_MULTIPLIER 14.71280603f
+
+#define OSCIL_SMP_EXTRA_SAMPLES 5
+
 namespace zyn {
 
 class Envelope;
@@ -28,8 +35,19 @@ class ModulatorNote
 
     Envelope *FMFreqEnvelope;
     Envelope *FMAmpEnvelope;
+
+    //integer part (skip) of the Modullator
+    unsigned int *oscposhiFM, *oscfreqhiFM;
+
 public:
-    void setup();
+    void setup(const ModulatorParameters& param);
+    void setupDetune(const ModulatorParameters& voicePar,
+                     unsigned char globalDetune);
+    void setupVoiceMod(const ModulatorParameters &param, const ModulatorParameters &FMVoicePar,
+            const SYNTH_T &synth, Allocator& memory, bool first_run,
+            bool isSoundType, float oscilFreq,
+            unsigned char Hrandgrouping, float voiceBaseFreq,
+            float velocity, int unison_size);
 };
 
 }

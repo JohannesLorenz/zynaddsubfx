@@ -111,7 +111,7 @@ void ADnote::setupVoice(int nvoice)
 
     param.OscilSmp->newrandseed(prng());
     voice.OscilSmp = NULL;
-    voice.setup();
+    voice.setup(param);
 
     voice.unison_size = 1;
 
@@ -221,10 +221,6 @@ void ADnote::setupVoice(int nvoice)
     voice.filterbypass = param.Pfilterbypass;
 
     setupVoiceMod(nvoice);
-
-    voice.FMVoice = param.PFMVoice;
-    voice.FMFreqEnvelope = NULL;
-    voice.FMAmpEnvelope  = NULL;
 
     voice.FMoldsmp = memory.valloc<float>(unison);
     for(int k = 0; k < unison; ++k)
@@ -382,6 +378,9 @@ int ADnote::setupVoiceUnison(int nvoice)
 
 void ADnote::setupVoiceDetune(int nvoice)
 {
+    const auto& voicePar = pars.VoicePar[nvoice];
+    auto& vce = NoteVoicePar[nvoice];
+
     //use the Globalpars.detunetype if the detunetype is 0
     if(pars.VoicePar[nvoice].PDetuneType != 0) {
         NoteVoicePar[nvoice].Detune = getdetune(
@@ -405,24 +404,21 @@ void ADnote::setupVoiceDetune(int nvoice)
                 0,
                 pars.VoicePar[nvoice].PDetune); //fine detune
     }
-    if(pars.VoicePar[nvoice].PFMDetuneType != 0)
-        NoteVoicePar[nvoice].FMDetune = getdetune(
-                pars.VoicePar[nvoice].PFMDetuneType,
-                pars.VoicePar[nvoice].
-                PFMCoarseDetune,
-                pars.VoicePar[nvoice].PFMDetune);
-    else
-        NoteVoicePar[nvoice].FMDetune = getdetune(
-                pars.GlobalPar.PDetuneType,
-                pars.VoicePar[nvoice].
-                PFMCoarseDetune,
-                pars.VoicePar[nvoice].PFMDetune);
+    vce.setupDetune(voicePar, pars.GlobalPar.PDetuneType);
 }
 
 void ADnote::setupVoiceMod(int nvoice, bool first_run)
 {
     auto &param = pars.VoicePar[nvoice];
     auto &voice = NoteVoicePar[nvoice];
+    float oscilFreq = getFMvoicebasefreq(nvoice);
+    voice.setupVoiceMod(param, pars.getFMVoicePar(nvoice), synth, memory,
+                        first_run, param.Type == 0, oscilFreq,
+                        pars.GlobalPar.Hrandgrouping, getvoicebasefreq(nvoice),
+                        velocity, voice.unison_size);
+
+    /* .., param.Type == 0) */
+#if 0
     float FMVolume;
 
     if (param.Type != 0)
@@ -495,6 +491,7 @@ void ADnote::setupVoiceMod(int nvoice, bool first_run)
     //Voice's modulator velocity sensing
     voice.FMVolume = FMVolume *
         VelF(velocity, pars.VoicePar[nvoice].PFMVelocityScaleFunction);
+#endif
 }
 
 SynthNote *ADnote::cloneLegato(void)
@@ -572,16 +569,7 @@ void ADnote::legatonote(const LegatoParams &lpars)
                 0,
                 pars.VoicePar[nvoice].PDetune); //fine detune
         }
-        if(pars.VoicePar[nvoice].PFMDetuneType != 0)
-            voice.FMDetune = getdetune(
-                pars.VoicePar[nvoice].PFMDetuneType,
-                pars.VoicePar[nvoice].PFMCoarseDetune,
-                pars.VoicePar[nvoice].PFMDetune);
-        else
-            voice.FMDetune = getdetune(
-                pars.GlobalPar.PDetuneType,
-                pars.VoicePar[nvoice].PFMCoarseDetune,
-                pars.VoicePar[nvoice].PFMDetune);
+        voice.setupDetune(pars.VoicePar[nvoice], pars.GlobalPar.PDetuneType);
 
         auto &voiceFilter = voice.Filter;
         if(voiceFilter) {
@@ -596,40 +584,7 @@ void ADnote::legatonote(const LegatoParams &lpars)
 
         voice.FMVoice = pars.VoicePar[nvoice].PFMVoice;
 
-        //Compute the Voice's modulator volume (incl. damping)
-        float fmvoldamp = powf(440.0f / getvoicebasefreq(nvoice),
-                               pars.VoicePar[nvoice].PFMVolumeDamp / 64.0f
-                               - 1.0f);
-
-        switch(voice.FMEnabled) {
-            case FMTYPE::PHASE_MOD:
-            case FMTYPE::PW_MOD:
-                fmvoldamp =
-                    powf(440.0f / getvoicebasefreq(
-                             nvoice), pars.VoicePar[nvoice].PFMVolumeDamp
-                         / 64.0f);
-                FMVolume =
-                    (expf(pars.VoicePar[nvoice].FMvolume / 100.0f
-                          * FM_AMP_MULTIPLIER) - 1.0f) * fmvoldamp * 4.0f;
-                break;
-            case FMTYPE::FREQ_MOD:
-                FMVolume =
-                    (expf(pars.VoicePar[nvoice].FMvolume / 100.0f
-                          * FM_AMP_MULTIPLIER) - 1.0f) * fmvoldamp * 4.0f;
-                break;
-            default:
-                if(fmvoldamp > 1.0f)
-                    fmvoldamp = 1.0f;
-                FMVolume =
-                    pars.VoicePar[nvoice].FMvolume
-                    / 100.0f * fmvoldamp;
-                break;
-        }
-
-        //Voice's modulator velocity sensing
-        voice.FMVolume = FMVolume *
-            VelF(velocity,
-                 pars.VoicePar[nvoice].PFMVelocityScaleFunction);
+        XXX
     }
     ///    initparameters();
 
@@ -706,11 +661,10 @@ void ADnote::legatonote(const LegatoParams &lpars)
             //Perform Anti-aliasing only on MIX or RING MODULATION
 
             int vc = nvoice;
-            if(pars.VoicePar[nvoice].PextFMoscil != -1)
-                vc = pars.VoicePar[nvoice].PextFMoscil;
+            const auto& FMVoicePar = pars.getFMVoicePar(nvoice);
 
             if(!pars.GlobalPar.Hrandgrouping)
-                pars.VoicePar[vc].FMSmp->newrandseed(prng());
+                FMVoicePar.FMSmp->newrandseed(prng());
 
             for(int i = 0; i < OSCIL_SMP_EXTRA_SAMPLES; ++i)
                 NoteVoicePar[nvoice].FMSmp[synth.oscilsize + i] =
@@ -897,22 +851,20 @@ void ADnote::initparameters(WatchManager *wm, const char *prefix)
 
             //Perform Anti-aliasing only on MIX or RING MODULATION
 
-            int vc = nvoice;
-            if(param.PextFMoscil != -1)
-                vc = param.PextFMoscil;
+            const auto& FMVoicePar = pars.getFMVoicePar(nvoice);
 
             float tmp = 1.0f;
-            if((pars.VoicePar[vc].FMSmp->Padaptiveharmonics != 0)
+            if((FMVoicePar.FMSmp->Padaptiveharmonics != 0)
                || (vce.FMEnabled == FMTYPE::MIX)
                || (vce.FMEnabled == FMTYPE::RING_MOD))
                 tmp = getFMvoicebasefreq(nvoice);
 
             if(!pars.GlobalPar.Hrandgrouping)
-                pars.VoicePar[vc].FMSmp->newrandseed(prng());
+                FMVoicePar.FMSmp->newrandseed(prng());
 
             for(int k = 0; k < vce.unison_size; ++k)
                 vce.oscposhiFM[k] = (vce.oscposhi[k]
-                                         + pars.VoicePar[vc].FMSmp->get(
+                                         + FMVoicePar.FMSmp->get(
                                              vce.FMSmp, tmp))
                                         % synth.oscilsize;
 
@@ -1065,7 +1017,16 @@ float ADnote::getvoicebasefreq(int nvoice, float adjust_log2) const
  */
 float ADnote::getFMvoicebasefreq(int nvoice) const
 {
-    return getvoicebasefreq(nvoice, NoteVoicePar[nvoice].FMDetune / 1200.0f);
+    float oscilFreq = 1.0f;
+    const auto& FMVoicePar = pars.getFMVoicePar(nvoice);
+    const auto& vce = NoteVoicePar[nvoice];
+    if((FMVoicePar.FMSmp->Padaptiveharmonics != 0)
+       || (vce.FMEnabled == FMTYPE::MIX)
+       || (vce.FMEnabled == FMTYPE::RING_MOD))
+    {
+        oscilFreq = getvoicebasefreq(nvoice, NoteVoicePar[nvoice].FMDetune / 1200.0f);
+    }
+    return oscilFreq;
 }
 
 /*
