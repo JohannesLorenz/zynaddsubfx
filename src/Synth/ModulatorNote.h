@@ -39,15 +39,27 @@ class ModulatorNote
     //integer part (skip) of the Modullator
     unsigned int *oscposhiFM, *oscfreqhiFM;
 
+    float FMoldamplitude, FMnewamplitude;
+
+    //used by Frequency Modulation (for integration)
+    float *FMoldsmp;
+
 public:
     void setup(const ModulatorParameters& param);
     void setupDetune(const ModulatorParameters& voicePar,
                      unsigned char globalDetune);
+    void setFMVoice(const ModulatorParameters& voicePar);
     void setupVoiceMod(const ModulatorParameters &param, const ModulatorParameters &FMVoicePar,
             const SYNTH_T &synth, Allocator& memory, bool first_run,
             bool isSoundType, float oscilFreq,
             unsigned char Hrandgrouping, float voiceBaseFreq,
             float velocity, int unison_size);
+    void setupVoiceMod2(const ModulatorParameters &param, const ModulatorParameters &FMVoicePar,
+            const SYNTH_T &synth, Allocator& memory, bool first_run,
+            bool isSoundType, float oscilFreq,
+            unsigned char Hrandgrouping, float voiceBaseFreq,
+            float velocity, int unison_size);
+    void initModulationPars(const ModulatorParameters& pars, const ModulatorParameters &FMVoicePar, const SYNTH_T &synth, unsigned char Hrandgrouping);
 };
 
 }

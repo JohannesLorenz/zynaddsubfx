@@ -247,9 +247,6 @@ class ADnote:public SynthNote
             //integer part (skip)
             int *oscposhi, *oscfreqhi;
 
-            //fractional part (skip) of the Modullator
-            float *oscposloFM, *oscfreqloFM;
-
             //the unison base_value
             float *unison_base_freq_rap;
 
@@ -267,11 +264,7 @@ class ADnote:public SynthNote
             } unison_vibratto;
 
             //used to compute and interpolate the amplitudes of voices and modullators
-            float oldamplitude, newamplitude,
-                  FMoldamplitude, FMnewamplitude;
-
-            //used by Frequency Modulation (for integration)
-            float *FMoldsmp;
+            float oldamplitude, newamplitude;
 
             //1 - if it is the fitst tick (used to fade in the sound)
             char firsttick;

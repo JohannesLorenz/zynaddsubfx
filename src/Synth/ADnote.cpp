@@ -411,9 +411,12 @@ void ADnote::setupVoiceMod(int nvoice, bool first_run)
 {
     auto &param = pars.VoicePar[nvoice];
     auto &voice = NoteVoicePar[nvoice];
-    float oscilFreq = getFMvoicebasefreq(nvoice);
     voice.setupVoiceMod(param, pars.getFMVoicePar(nvoice), synth, memory,
-                        first_run, param.Type == 0, oscilFreq,
+                        first_run, param.Type == 0, getFMvoicebasefreq(nvoice),
+                        pars.GlobalPar.Hrandgrouping, getvoicebasefreq(nvoice),
+                        velocity, voice.unison_size);
+    voice.setupVoiceMod2(param, pars.getFMVoicePar(nvoice), synth, memory,
+                        first_run, param.Type == 0, getFMvoicebasefreq(nvoice),
                         pars.GlobalPar.Hrandgrouping, getvoicebasefreq(nvoice),
                         velocity, voice.unison_size);
 
@@ -582,9 +585,12 @@ void ADnote::legatonote(const LegatoParams &lpars)
             pars.VoicePar[nvoice].Pfilterbypass;
 
 
-        voice.FMVoice = pars.VoicePar[nvoice].PFMVoice;
-
-        XXX
+        voice.setFMVoice(pars.VoicePar[nvoice]);
+        voice.setupVoiceMod2(pars.VoicePar[nvoice], pars.getFMVoicePar(nvoice),
+            synth, memory, true, true,
+            getFMvoicebasefreq(nvoice),
+            pars.GlobalPar.Hrandgrouping, getvoicebasefreq(nvoice),
+            velocity, voice.unison_size);
     }
     ///    initparameters();
 
@@ -653,31 +659,8 @@ void ADnote::legatonote(const LegatoParams &lpars)
             voiceFilter->updateNoteFreq(basefreq);
         }
 
-        /* Voice Modulation Parameters Init */
-        if((NoteVoicePar[nvoice].FMEnabled != FMTYPE::NONE)
-           && (NoteVoicePar[nvoice].FMVoice < 0)) {
-            pars.VoicePar[nvoice].FMSmp->newrandseed(prng());
 
-            //Perform Anti-aliasing only on MIX or RING MODULATION
-
-            int vc = nvoice;
-            const auto& FMVoicePar = pars.getFMVoicePar(nvoice);
-
-            if(!pars.GlobalPar.Hrandgrouping)
-                FMVoicePar.FMSmp->newrandseed(prng());
-
-            for(int i = 0; i < OSCIL_SMP_EXTRA_SAMPLES; ++i)
-                NoteVoicePar[nvoice].FMSmp[synth.oscilsize + i] =
-                    NoteVoicePar[nvoice].FMSmp[i];
-        }
-
-        vce.FMnewamplitude = NoteVoicePar[nvoice].FMVolume
-                                 * ctl.fmamp.relamp;
-
-        if(pars.VoicePar[nvoice].PFMAmpEnvelopeEnabled
-           && NoteVoicePar[nvoice].FMAmpEnvelope)
-            vce.FMnewamplitude *=
-                NoteVoicePar[nvoice].FMAmpEnvelope->envout_dB();
+        vce.initModulationPars(pars.VoicePar[nvoice], pars.getFMVoicePar(nvoice), synth, pars.GlobalPar.Hrandgrouping);
     }
 
     for(int nvoice = 0; nvoice < NUM_VOICES; ++nvoice) {
