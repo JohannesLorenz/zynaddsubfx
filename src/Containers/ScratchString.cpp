@@ -28,7 +28,7 @@ ScratchString::ScratchString(const char *str)
         memset(c_str, 0, sizeof(c_str));
 }
 
-ScratchString ScratchString::operator+(const ScratchString s)
+ScratchString ScratchString::operator+(const ScratchString s) const
 {
     ScratchString ss;
     fast_strcpy(ss.c_str, c_str, SCRATCH_SIZE);

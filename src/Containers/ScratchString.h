@@ -11,7 +11,7 @@ struct ScratchString
     ScratchString(unsigned char num);
     ScratchString(const char *str);
 
-    ScratchString operator+(const ScratchString s);
+    ScratchString operator+(const ScratchString s) const;
 
     //operator const char*() const;
 

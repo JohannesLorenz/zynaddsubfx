@@ -85,6 +85,7 @@ class ADnote:public SynthNote
          * Affects tmpwave_unison and updates oscposhi/oscposlo
          * @todo remove this declaration if it is commented out*/
         inline void ComputeVoiceOscillator_CubicInterpolation(int nvoice);
+
         /**Computes the Oscillator samples with mixing.
          * updates tmpwave_unison*/
         inline void ComputeVoiceOscillatorMix(int nvoice);
@@ -288,6 +289,8 @@ class ADnote:public SynthNote
 
         //how the fine detunes are made bigger or smaller
         float bandwidthDetuneMultiplier;
+
+        float getFMOscilFreq(int nvoice) const;
 };
 
 }
