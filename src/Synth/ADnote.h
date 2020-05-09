@@ -64,7 +64,7 @@ class ADnote:public SynthNote
         void compute_unison_freq_rap(int nvoice);
         /**Compute parameters for next tick*/
         void computecurrentparameters();
-        /**Initializes All Parameters*/
+        /**Initializes All Parameters (called by CTOR only)*/
         void initparameters(WatchManager *wm, const char *prefix);
         /**Deallocate/Cleanup given voice*/
         void KillVoice(int nvoice);

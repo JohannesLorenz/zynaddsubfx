@@ -17,11 +17,12 @@
 #include "../globals.h"
 #include "Envelope.h"
 #include "LFO.h"
+#include "ModulatorNote.h"
 
 namespace zyn {
 
 /**The "pad" synthesizer*/
-class PADnote:public SynthNote
+class PADnote:public SynthNote, public ModulatorNote
 {
     public:
         PADnote(const PADnoteParameters *parameters, const SynthParams &pars,

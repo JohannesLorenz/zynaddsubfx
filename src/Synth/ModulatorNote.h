@@ -1,3 +1,24 @@
+/*
+  ZynAddSubFX - a software synthesizer
+
+  ModulatorNote.h - Note for TODO
+  Copyright (C) 2020-2020 Johannes Lorenz <jlsf2013$users.sourceforge.net, $=@>
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of version 2 of the GNU General Public License
+  as published by the Free Software Foundation.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License (version 2 or later) for more details.
+
+  You should have received a copy of the GNU General Public License (version 2)
+  along with this program; if not, write to the Free Software Foundation,
+  Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+
+*/
+
 #ifndef MODULATORNOTE_H
 #define MODULATORNOTE_H
 
@@ -59,65 +80,78 @@ public:
     float getFMDetune() const { return FMDetune; }
     int getFMVoice() const { return FMVoice; }
     FMTYPE getFMEnabled() const { return FMEnabled; }
-    //float getFMvoicebasefreq(float voicebasefreq) const;
     float getFMOscilFreq(int nvoice, const OscilGen *FMSmp) const;
 
     /*
      * setup functions
      */
-    // to be called at object construction
+    //! "initialize" members
+    //! to be called at object construction
     void setup(const ModulatorParameters& param, Allocator &memory, int unison);
-    // to be called at object construction and when UI params change (RT thread, noteout)
+    //! set FMDetune value
+    //! to be called at object construction and when UI params change (RT thread, noteout)
     void setupDetune(const ModulatorParameters& voicePar,
                      unsigned char globalDetuneType);
+    // only required for legatonote
     void setFMVoice(const ModulatorParameters& voicePar);
     // to be called at object construction and when UI params change (RT thread, noteout)
-    void setupVoiceMod(const ModulatorParameters &param, const ModulatorParameters &FMVoicePar, // TODO: pack into updateVoiceMod?
+    void setupVoiceMod(
+            const ModulatorParameters &param, const ModulatorParameters &FMVoicePar, // TODO: pack into updateVoiceMod?
             const SYNTH_T &synth, Allocator& memory, bool first_run,
             bool isSoundType, float oscilFreq,
-            unsigned char Hrandgrouping, int unison_size, const int *oscposhi);
-    void setupVoiceMod2(const ModulatorParameters &param, float voiceBaseFreq,
+            bool Hrandgrouping, int unison_size, const int *oscposhi);
+    //! Compute the Voice's modulator volume (incl. damping)
+    //! to be called at object construction and when UI params change (RT thread, noteout)
+    void setupVoiceFMVol(const ModulatorParameters &param, float voiceBaseFreq,
             float velocity);
+    //! To be called by CTOR only
     void setupVoiceMod3(const ModulatorParameters &param,
             const SYNTH_T &synth, Allocator& memory, const Controller &ctl, WatchManager *wm, int nvoice,
             float basefreq, const ScratchString &pre);
+    //! Only for ADnote::legatonote
+    void setupVoiceMod4(const ModulatorParameters& pars, const ModulatorParameters &FMVoicePar, const SYNTH_T &synth, const Controller& ctl, bool Hrandgrouping);
+
     /*
      * misc functions
      */
-    void initModulationPars(const ModulatorParameters& pars, const ModulatorParameters &FMVoicePar, const SYNTH_T &synth, const Controller& ctl, unsigned char Hrandgrouping);
+    //! To be called at beginning of noteout
     void computeCurrentParameters(const SYNTH_T &synth, const Controller &ctl, float voicefreq, int unison_size, float *unison_freq_rap);
 
-
 private:
+    //! set oscfreqhi/loFM
     void setfreqFM(const SYNTH_T &synth, float in_freq, int unison_size, float *unison_freq_rap);
 public:
-    /** Computes the Oscillator samples with mixing.
-     * updates tmpwave_unison */
+    //! Compute the Oscillator samples with mixing
     void ComputeVoiceOscillatorMix(const SYNTH_T &synth, ModulatorNote& fmVoice, int unison_size, float **tmpwave_unison);
-    /** Computes the Ring Modulated Oscillator. */
+    //! Compute the Ring Modulated Oscillator
     void ComputeVoiceOscillatorRingModulation(const SYNTH_T &synth, ModulatorNote &fmVoice, int unison_size, float **tmpwave_unison);
-    /** Computes the Frequency Modulated Oscillator.
-     *  @param FMmode modulation type 0=Phase 1=Frequency */
+    //! Compute the Frequency Modulated Oscillator.
+    //! @param FMmode modulation type
     void ComputeVoiceOscillatorFrequencyModulation(// input params
             const SYNTH_T &synth, ModulatorNote& fmVoice, int unison_size, float **tmpwave_unison, const float *OscilSmp, int phase_offset,
             // in/out params
             int *oscposhi, int *oscfreqhi, float *oscposlo, float *oscfreqlo,
             // FM type
             FMTYPE FMmode);
-    //  inline void ComputeVoiceOscillatorFrequencyModulation(int nvoice);
-    /**TODO*/
-    void ComputeVoiceOscillatorPitchModulation(int nvoice);
 
+    //! Put the samples into VoiceOut
+    //! To be called when you computed this voice and want to store it for the next voice
+    //! (before applying "global" volume, because this is only used as a modulator)
     void putSamplesIntoVoiceOut(const SYNTH_T &synth, float* tmpwavel, float* tmpwaver, bool stereo);
-    void kill(Allocator &memory, const SYNTH_T &synth);
+
+    //! Cleanup, deallocation
+    //! To be called by DTOR or when the note is already finished
+    void killMod(Allocator &memory, const SYNTH_T &synth);
 protected:
+    //! Calls releasekey on the envelopes
     void releasekey();
 public:
-    void killVoiceOut(Allocator &memory);
-    void kill0(Allocator &memory);
-    void allocVoiceOut(const SYNTH_T &synth, Allocator &memory);
+    //! Allocate and zero-out VoiceOut buffer
+    //! Should be called only by CTOR in case this voice
+    //! is used by another modulator
+    void allocAndInitVoiceOut(const SYNTH_T &synth, Allocator &memory);
+    //! Set modulation voice to "none"
     void disableFMVoice() { FMVoice = -1; }
-    void initVoiceOut(const SYNTH_T &synth);
 };
 
 }

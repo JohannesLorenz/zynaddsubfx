@@ -105,7 +105,6 @@ void ADnote::setupVoice(int nvoice)
     auto &param = pars.VoicePar[nvoice];
     auto &voice = NoteVoicePar[nvoice];
 
-
     for (int i = 0; i < 14; i++)
         voice.pinking[i] = 0.0;
 
@@ -401,8 +400,8 @@ void ADnote::setupVoiceMod(int nvoice, bool first_run)
     voice.setupVoiceMod(param, pars.getFMVoicePar(nvoice), synth, memory,
                         first_run, param.Type == 0, getFMOscilFreq(nvoice),
                         pars.GlobalPar.Hrandgrouping, voice.unison_size, voice.oscposhi);
-    voice.setupVoiceMod2(param, getvoicebasefreq(nvoice),
-                        velocity);
+    voice.setupVoiceFMVol(param, getvoicebasefreq(nvoice),
+                          velocity);
 }
 
 SynthNote *ADnote::cloneLegato(void)
@@ -493,7 +492,7 @@ void ADnote::legatonote(const LegatoParams &lpars)
             pars.VoicePar[nvoice].Pfilterbypass;
 
         voice.setFMVoice(pars.VoicePar[nvoice]);
-        voice.setupVoiceMod2(pars.VoicePar[nvoice], getvoicebasefreq(nvoice),
+        voice.setupVoiceFMVol(pars.VoicePar[nvoice], getvoicebasefreq(nvoice),
             velocity);
     }
     ///    initparameters();
@@ -563,16 +562,7 @@ void ADnote::legatonote(const LegatoParams &lpars)
             voiceFilter->updateNoteFreq(basefreq);
         }
 
-        vce.initModulationPars(pars.VoicePar[nvoice], pars.getFMVoicePar(nvoice), synth, ctl, pars.GlobalPar.Hrandgrouping);
-    }
-
-    // dead code - TODO: remove
-    for(int nvoice = 0; nvoice < NUM_VOICES; ++nvoice) {
-        for(unsigned i = nvoice + 1; i < NUM_VOICES; ++i)
-            tmp[i] = 0;
-        for(unsigned i = nvoice + 1; i < NUM_VOICES; ++i)
-            if((NoteVoicePar[i].getFMVoice() == nvoice) && (tmp[i] == 0))
-                tmp[i] = 1;
+        vce.setupVoiceMod4(pars.VoicePar[nvoice], pars.getFMVoicePar(nvoice), synth, ctl, pars.GlobalPar.Hrandgrouping);
     }
 }
 
@@ -580,13 +570,12 @@ void ADnote::legatonote(const LegatoParams &lpars)
 /*
  * Kill a voice of ADnote
  */
-void ADnote::KillVoice(int nvoice)
+void ADnote::KillVoice(int nvoice) // TODO: move this all into Voice::kill
 {
     auto &voice = NoteVoicePar[nvoice];
 
     memory.devalloc(voice.oscfreqhi);
     memory.devalloc(voice.oscfreqlo);
-    NoteVoicePar[nvoice].kill0(memory);
     memory.devalloc(voice.oscposhi);
     memory.devalloc(voice.oscposlo);
 
@@ -607,7 +596,6 @@ void ADnote::KillNote()
     for(unsigned nvoice = 0; nvoice < NUM_VOICES; ++nvoice) {
         if(NoteVoicePar[nvoice].Enabled == ON)
             KillVoice(nvoice);
-        NoteVoicePar[nvoice].killVoiceOut(memory);
     }
 
     NoteGlobalPar.kill(memory);
@@ -631,6 +619,7 @@ ADnote::~ADnote()
 
 /*
  * Init the parameters
+ * Called by CTOR only
  */
 void ADnote::initparameters(WatchManager *wm, const char *prefix)
 {
@@ -726,8 +715,8 @@ void ADnote::initparameters(WatchManager *wm, const char *prefix)
 
         /* Voice Modulation Parameters Init */
         vce.setupVoiceMod(param, pars.getFMVoicePar(nvoice), synth, memory,
-                            false, param.Type == 0, getFMOscilFreq(nvoice),
-                            pars.GlobalPar.Hrandgrouping, vce.unison_size, vce.oscposhi);
+                          false, param.Type == 0, getFMOscilFreq(nvoice),
+                          pars.GlobalPar.Hrandgrouping, vce.unison_size, vce.oscposhi);
         vce.setupVoiceMod3(param, synth, memory, ctl, wm, nvoice,
                             basefreq, pre);
     }
@@ -738,10 +727,9 @@ void ADnote::initparameters(WatchManager *wm, const char *prefix)
             allocated[i] = false;
         for(int i = nvoice + 1; i < NUM_VOICES; ++i)
             if((NoteVoicePar[i].getFMVoice() == nvoice) && !allocated[i]) {
-                NoteVoicePar[nvoice].allocVoiceOut(synth, memory);
+                NoteVoicePar[nvoice].allocAndInitVoiceOut(synth, memory);
                 allocated[i] = true;
             }
-        NoteVoicePar[nvoice].initVoiceOut(synth);
     }
 }
 
@@ -1366,7 +1354,7 @@ int ADnote::noteout(float *outl, float *outr)
         //the voice is killed later
 
 
-        // Put the ADnote samples in VoiceOut (without applying Global volume, because I wish to use this voice as a modullator)
+        // Put the ADnote samples in VoiceOut (without applying Global volume, because I wish to use this voice as a modulator)
         vce.putSamplesIntoVoiceOut(synth, tmpwavel, tmpwaver, stereo);
 
         // Add the voice that do not bypass the filter to out
@@ -1518,7 +1506,7 @@ void ADnote::Voice::kill(Allocator &memory, const SYNTH_T &synth)
     memory.dealloc(Filter);
     memory.dealloc(FilterEnvelope);
     memory.dealloc(FilterLfo);
-    ModulatorNote::kill(memory, synth);
+    killMod(memory, synth);
 
     Enabled = OFF;
 }

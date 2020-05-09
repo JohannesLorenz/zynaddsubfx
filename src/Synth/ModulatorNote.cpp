@@ -1,4 +1,23 @@
-// TODO: header
+/*
+  ZynAddSubFX - a software synthesizer
+
+  ModulatorNote.cpp - Note for TODO
+  Copyright (C) 2020-2020 Johannes Lorenz <jlsf2013$users.sourceforge.net, $=@>
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of version 2 of the GNU General Public License
+  as published by the Free Software Foundation.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License (version 2 or later) for more details.
+
+  You should have received a copy of the GNU General Public License (version 2)
+  along with this program; if not, write to the Free Software Foundation,
+  Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+
+*/
 
 #include "ModulatorNote.h"
 
@@ -54,15 +73,10 @@ void ModulatorNote::setup(const ModulatorParameters &param, Allocator& memory, i
         FMoldsmp[k] = 0.0f; //this is for FM (integration)
 }
 
-void ModulatorNote::allocVoiceOut(const SYNTH_T &synth, Allocator& memory)
+void ModulatorNote::allocAndInitVoiceOut(const SYNTH_T &synth, Allocator& memory)
 {
     VoiceOut = memory.valloc<float>(synth.buffersize);
-}
-
-void ModulatorNote::initVoiceOut(const SYNTH_T &synth)
-{
-    if(VoiceOut)
-        memset(VoiceOut, 0, synth.bufferbytes);
+    memset(VoiceOut, 0, synth.bufferbytes);
 }
 
 void ModulatorNote::setupDetune(const ModulatorParameters &voicePar, unsigned char globalDetuneType)
@@ -79,48 +93,42 @@ void ModulatorNote::setFMVoice(const ModulatorParameters &voicePar)
     FMVoice = voicePar.PFMVoice;
 }
 
-void ModulatorNote::setupVoiceMod(
-    const ModulatorParameters &param, const ModulatorParameters &FMVoicePar,
+void ModulatorNote::setupVoiceMod(const ModulatorParameters &param, const ModulatorParameters &FMVoicePar,
         const SYNTH_T &synth, Allocator &memory,
         bool first_run,
-        bool isSoundType, float oscilFreq, unsigned char Hrandgrouping,
+        bool isSoundType, float oscilFreq, bool Hrandgrouping,
         int unison_size, const int* oscposhi)
 {
-  //  auto &param = pars.VoicePar[nvoice];
-    auto &voice = *this; // TODO
-
-    voice.FMEnabled = (isSoundType) ? param.PFMEnabled : FMTYPE::NONE;
-    voice.FMFreqFixed  = param.PFMFixedFreq;
+    FMEnabled = (isSoundType) ? param.PFMEnabled : FMTYPE::NONE;
+    FMFreqFixed = param.PFMFixedFreq;
 
     //Triggers when a user enables modulation on a running voice
-    if(!first_run && voice.FMEnabled != FMTYPE::NONE && voice.FMSmp == NULL && voice.FMVoice < 0) {
+    if(!first_run && FMEnabled != FMTYPE::NONE && FMSmp == NULL && FMVoice < 0) {
         param.FMSmp->newrandseed(prng());
-        voice.FMSmp = memory.valloc<float>(synth.oscilsize + OSCIL_SMP_EXTRA_SAMPLES);
-        memset(voice.FMSmp, 0, sizeof(float)*(synth.oscilsize + OSCIL_SMP_EXTRA_SAMPLES));
+        FMSmp = memory.valloc<float>(synth.oscilsize + OSCIL_SMP_EXTRA_SAMPLES);
+        memset(FMSmp, 0, sizeof(float)*(synth.oscilsize + OSCIL_SMP_EXTRA_SAMPLES));
 
         if(!Hrandgrouping)
             FMVoicePar.FMSmp->newrandseed(prng());
 
         for(int k = 0; k < unison_size; ++k)
-            voice.oscposhiFM[k] = (oscposhi[k]
-                    + FMVoicePar.FMSmp->get(
-                        voice.FMSmp, oscilFreq))
+            oscposhiFM[k] = (oscposhi[k]
+                    + FMVoicePar.FMSmp->get(FMSmp, oscilFreq))
                 % synth.oscilsize;
 
         for(int i = 0; i < OSCIL_SMP_EXTRA_SAMPLES; ++i)
-            voice.FMSmp[synth.oscilsize + i] = voice.FMSmp[i];
+            FMSmp[synth.oscilsize + i] = FMSmp[i];
         int oscposhiFM_add =
-            (int)((param.PFMoscilphase
-                        - 64.0f) / 128.0f * synth.oscilsize
+            (int)((param.PFMoscilphase- 64.0f) / 128.0f * synth.oscilsize
                     + synth.oscilsize * 4);
         for(int k = 0; k < unison_size; ++k) {
-            voice.oscposhiFM[k] += oscposhiFM_add;
-            voice.oscposhiFM[k] %= synth.oscilsize;
+            oscposhiFM[k] += oscposhiFM_add;
+            oscposhiFM[k] %= synth.oscilsize;
         }
     }
 }
 
-void ModulatorNote::setupVoiceMod2(
+void ModulatorNote::setupVoiceFMVol(
     const ModulatorParameters &param,
         float voiceBaseFreq, float velocity)
 {
@@ -172,7 +180,7 @@ void ModulatorNote::setupVoiceMod3(const ModulatorParameters &param,
     }
 }
 
-void ModulatorNote::initModulationPars(const ModulatorParameters &pars, const ModulatorParameters &FMVoicePar, const SYNTH_T &synth, const Controller &ctl, unsigned char Hrandgrouping)
+void ModulatorNote::setupVoiceMod4(const ModulatorParameters &pars, const ModulatorParameters &FMVoicePar, const SYNTH_T &synth, const Controller &ctl, bool Hrandgrouping)
 {
     /* Voice Modulation Parameters Init */
     if((FMEnabled != FMTYPE::NONE)
@@ -193,16 +201,6 @@ void ModulatorNote::initModulationPars(const ModulatorParameters &pars, const Mo
     if(pars.PFMAmpEnvelopeEnabled && FMAmpEnvelope)
         FMnewamplitude *= FMAmpEnvelope->envout_dB();
 }
-
-// TODO: remove:
-/*
- * Get Voice's Modulator base frequency
- */
-/*float ModulatorNote::getFMvoicebasefreq(float voicebasefreq) const
-{
-    float detune = FMDetune / 100.0f;
-    return voicebasefreq * powf(2, detune / 12.0f);
-}*/
 
 void ModulatorNote::computeCurrentParameters(const SYNTH_T& synth, const Controller &ctl, float voicefreq, int unison_size, float* unison_freq_rap)
 {
@@ -475,18 +473,18 @@ void ModulatorNote::putSamplesIntoVoiceOut(const SYNTH_T &synth, float *tmpwavel
     }
 }
 
-void ModulatorNote::kill0(Allocator &memory)
+void ModulatorNote::killMod(Allocator &memory, const SYNTH_T &synth)
 {
+    if(VoiceOut)
+        memory.dealloc(VoiceOut);
+
     memory.devalloc(oscfreqhiFM);
     memory.devalloc(oscfreqloFM);
     memory.devalloc(oscposhiFM);
     memory.devalloc(oscposloFM);
 
     memory.devalloc(FMoldsmp);
-}
 
-void ModulatorNote::kill(Allocator &memory, const SYNTH_T &synth)
-{
     memory.dealloc(FMFreqEnvelope);
     memory.dealloc(FMAmpEnvelope);
 
@@ -505,12 +503,6 @@ void ModulatorNote::releasekey()
         FMFreqEnvelope->releasekey();
     if(FMAmpEnvelope)
         FMAmpEnvelope->releasekey();
-}
-
-void ModulatorNote::killVoiceOut(Allocator &memory)
-{
-    if(VoiceOut)
-        memory.dealloc(VoiceOut);
 }
 
 }

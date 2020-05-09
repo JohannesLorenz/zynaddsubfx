@@ -197,6 +197,13 @@ void PADnote::setup(float velocity_,
         finished_ = true;
         return;
     }
+
+    ModulatorNote::setup(pars, memory, 1);
+    ModulatorNote::setupDetune(pars, pars.PDetuneType);
+    ModulatorNote::setupVoiceMod(pars, pars, synth, memory, true, true,
+                                 realfreq, false, 1, &poshi_l);
+    ModulatorNote::setupVoiceFMVol(pars, realfreq, velocity);
+    ModulatorNote::setupVoiceMod3(pars, synth, memory, ctl, wm, 0, realfreq, prefix);
 }
 
 SynthNote *PADnote::cloneLegato(void)
@@ -218,6 +225,7 @@ void PADnote::legatonote(const LegatoParams &pars)
 
 PADnote::~PADnote()
 {
+    ModulatorNote::killMod(memory, synth);
     memory.dealloc(NoteGlobalPar.FreqEnvelope);
     memory.dealloc(NoteGlobalPar.FreqLfo);
     memory.dealloc(NoteGlobalPar.AmpEnvelope);
@@ -275,6 +283,9 @@ void PADnote::computecurrentparameters()
     realfreq =
         powf(2.0f, note_log2_freq + globalpitch / 12.0f + portamentofreqdelta_log2) *
         powf(ctl.pitchwheel.relfreq, BendAdjust) + OffsetHz;
+
+    float freqrap = 1.f;
+    ModulatorNote::computeCurrentParameters(synth, ctl, realfreq, 0, &freqrap);
 }
 
 
