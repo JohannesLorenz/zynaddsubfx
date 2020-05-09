@@ -284,7 +284,7 @@ void PADnote::computecurrentparameters()
         powf(2.0f, note_log2_freq + globalpitch / 12.0f + portamentofreqdelta_log2) *
         powf(ctl.pitchwheel.relfreq, BendAdjust) + OffsetHz;
 
-    float freqrap = 1.f;
+    const float freqrap = 1.f;
     ModulatorNote::computeCurrentParameters(synth, ctl, realfreq, 0, &freqrap);
 }
 
@@ -467,6 +467,7 @@ void PADnote::entomb(void)
 
 void PADnote::releasekey()
 {
+    ModulatorNote::releasekey();
     NoteGlobalPar.FreqEnvelope->releasekey();
     NoteGlobalPar.FilterEnvelope->releasekey();
     NoteGlobalPar.AmpEnvelope->releasekey();

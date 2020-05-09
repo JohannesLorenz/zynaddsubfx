@@ -562,7 +562,7 @@ void ADnote::legatonote(const LegatoParams &lpars)
             voiceFilter->updateNoteFreq(basefreq);
         }
 
-        vce.setupVoiceMod4(pars.VoicePar[nvoice], pars.getFMVoicePar(nvoice), synth, ctl, pars.GlobalPar.Hrandgrouping);
+        vce.setupVoiceModForLegato(pars.VoicePar[nvoice], pars.getFMVoicePar(nvoice), synth, ctl, pars.GlobalPar.Hrandgrouping);
     }
 }
 

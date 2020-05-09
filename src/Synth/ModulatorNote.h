@@ -109,17 +109,17 @@ public:
             const SYNTH_T &synth, Allocator& memory, const Controller &ctl, WatchManager *wm, int nvoice,
             float basefreq, const ScratchString &pre);
     //! Only for ADnote::legatonote
-    void setupVoiceMod4(const ModulatorParameters& pars, const ModulatorParameters &FMVoicePar, const SYNTH_T &synth, const Controller& ctl, bool Hrandgrouping);
+    void setupVoiceModForLegato(const ModulatorParameters& pars, const ModulatorParameters &FMVoicePar, const SYNTH_T &synth, const Controller& ctl, bool Hrandgrouping);
 
     /*
      * misc functions
      */
     //! To be called at beginning of noteout
-    void computeCurrentParameters(const SYNTH_T &synth, const Controller &ctl, float voicefreq, int unison_size, float *unison_freq_rap);
+    void computeCurrentParameters(const SYNTH_T &synth, const Controller &ctl, float voicefreq, int unison_size, const float *unison_freq_rap);
 
 private:
     //! set oscfreqhi/loFM
-    void setfreqFM(const SYNTH_T &synth, float in_freq, int unison_size, float *unison_freq_rap);
+    void setfreqFM(const SYNTH_T &synth, float in_freq, int unison_size, const float *unison_freq_rap);
 public:
     //! Compute the Oscillator samples with mixing
     void ComputeVoiceOscillatorMix(const SYNTH_T &synth, ModulatorNote& fmVoice, int unison_size, float **tmpwave_unison);

@@ -129,7 +129,7 @@ apply_watcher->callback=[this](int needsPrepare) {
     }
 };
 apply_watcher->doUpdate(location+"needPrepare");
-initialized = true;} {}
+initialized = true; oscedit = nullptr;} {}
   }
   Function {make_window()} {open
   } {

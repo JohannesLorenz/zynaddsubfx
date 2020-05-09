@@ -35,7 +35,7 @@ namespace zyn {
 /*
  * Computes the frequency of an modullator oscillator
  */
-void ModulatorNote::setfreqFM(const SYNTH_T& synth, float in_freq, int unison_size, float* unison_freq_rap)
+void ModulatorNote::setfreqFM(const SYNTH_T& synth, float in_freq, int unison_size, const float* unison_freq_rap)
 {
     for(int k = 0; k < unison_size; ++k) {
         float freq  = fabsf(in_freq) * unison_freq_rap[k];
@@ -180,7 +180,7 @@ void ModulatorNote::setupVoiceMod3(const ModulatorParameters &param,
     }
 }
 
-void ModulatorNote::setupVoiceMod4(const ModulatorParameters &pars, const ModulatorParameters &FMVoicePar, const SYNTH_T &synth, const Controller &ctl, bool Hrandgrouping)
+void ModulatorNote::setupVoiceModForLegato(const ModulatorParameters &pars, const ModulatorParameters &FMVoicePar, const SYNTH_T &synth, const Controller &ctl, bool Hrandgrouping)
 {
     /* Voice Modulation Parameters Init */
     if((FMEnabled != FMTYPE::NONE)
@@ -202,7 +202,7 @@ void ModulatorNote::setupVoiceMod4(const ModulatorParameters &pars, const Modula
         FMnewamplitude *= FMAmpEnvelope->envout_dB();
 }
 
-void ModulatorNote::computeCurrentParameters(const SYNTH_T& synth, const Controller &ctl, float voicefreq, int unison_size, float* unison_freq_rap)
+void ModulatorNote::computeCurrentParameters(const SYNTH_T& synth, const Controller &ctl, float voicefreq, int unison_size, const float *unison_freq_rap)
 {
     if(FMEnabled != FMTYPE::NONE) {
         float FMfreq, FMrelativepitch;
