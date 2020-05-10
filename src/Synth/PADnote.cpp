@@ -200,8 +200,9 @@ void PADnote::setup(float velocity_,
 
     ModulatorNote::setup(pars, memory, 1);
     ModulatorNote::setupDetune(pars, pars.PDetuneType);
+    int pos_avg = (poshi_l + poshi_r) / 2;
     ModulatorNote::setupVoiceMod(pars, pars, synth, memory, true, true,
-                                 realfreq, false, 1, &poshi_l);
+                                 realfreq, false, 1, &pos_avg);
     ModulatorNote::setupVoiceFMVol(pars, realfreq, velocity);
     ModulatorNote::setupVoiceMod3(pars, synth, memory, ctl, wm, 0, realfreq, prefix);
 }
@@ -301,6 +302,7 @@ int PADnote::Compute_Linear(float *outl,
     }
     int size = pars.sample[nsample].size;
     for(int i = 0; i < synth.buffersize; ++i) {
+        smps = pars.curSampleToPlay(nsample);
         poshi_l += freqhi;
         poshi_r += freqhi;
         poslo   += freqlo;
@@ -331,7 +333,40 @@ int PADnote::Compute_Cubic(float *outl,
     }
     int   size = pars.sample[nsample].size;
     float xm1, x0, x1, x2, a, b, c;
+
+
+    fixFMamplitudes();
+//    float* tmpwave_unison[1]; // TODO
+    int    poshiFM  = oscposhiFM[0];
+    float  posloFM  = oscposloFM[0];
+    int    freqhiFM = oscfreqhiFM[0];
+    float  freqloFM = oscfreqloFM[0];
+//    float *tw = tmpwave_unison[0];
+
     for(int i = 0; i < synth.buffersize; ++i) {
+
+        float amp;
+        if(!!getFMEnabled())
+        {
+        //for(int i = 0; i < synth.buffersize; ++i) {
+            amp = INTERPOLATE_AMPLITUDE(getFMoldamplitude(),
+                                        getFMnewamplitude(),
+                                        i,
+                                        synth.buffersize);
+
+            posloFM += freqloFM;
+            if(posloFM >= 1.0f) {
+                posloFM -= 1.0f;
+                poshiFM++;
+            }
+            poshiFM += freqhiFM;
+            poshiFM &= synth.oscilsize - 1;
+        //}
+        }
+        else
+            amp = 0.f;
+
+        smps = pars.curSampleToPlay(nsample, amp);
         poshi_l += freqhi;
         poshi_r += freqhi;
         poslo   += freqlo;
@@ -365,6 +400,10 @@ int PADnote::Compute_Cubic(float *outl,
         c       = (x1 - xm1) * 0.5f;
         outr[i] = (((a * poslo) + b) * poslo + c) * poslo + x0;
     }
+
+    oscposhiFM[0] = poshiFM;
+    oscposloFM[0] = posloFM;
+
     return 1;
 }
 
@@ -383,7 +422,7 @@ int PADnote::noteout(float *outl, float *outr)
 
 
     float freqrap = realfreq / smpfreq;
-    int   freqhi  = (int) (floor(freqrap));
+    int   freqhi  = (int) (floorf(freqrap));
     float freqlo  = freqrap - floorf(freqrap);
 
 

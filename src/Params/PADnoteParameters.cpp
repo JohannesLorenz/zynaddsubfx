@@ -480,14 +480,29 @@ const float* PADnoteParameters::curSample(std::size_t idx) const
     return sample[idx].smp[Sample::bufs_per_oscilgen_par * oscilgen->Pbasefuncpar];
 }
 
-const float* PADnoteParameters::curSampleToPlay(std::size_t idx) const
+const float* PADnoteParameters::curSampleToPlay(std::size_t idx, float waveParam) const
 {
-    /* for wavetable mode (currently abusing discrete mode), use wavepos */
+    /* for wavetable mode (currently abusing discrete mode), use */
+    /* something like wavepos +- waveParam */
     /* otherwise, just use the oscilgen parameter */
     // TODO: remove cast when OscilGen has floats
-    std::size_t pos = (Pmode == pad_mode::wavetable)
-        ? static_cast<std::size_t>(Pwavepos) // desired wavetable position
-        : (oscilgen->Pbasefuncpar * Sample::bufs_per_oscilgen_par); // fix oscilgen parameter
+    std::size_t pos;
+    if(Pmode == pad_mode::wavetable && waveParam != 0.f)
+    {
+        long posI;
+        waveParam = std::max(0.f, std::min(1.f, waveParam));
+
+        float max_extent = std::min(Pwavepos, (Sample::num_buffers() - 1) - Pwavepos); // in range [0,63]
+
+        posI = static_cast<std::size_t>(roundf(Pwavepos + max_extent * waveParam));
+
+        posI = std::max(0l, std::min(((long)Sample::num_buffers()) - 1, posI));
+        pos = static_cast<std::size_t>(posI);
+    }
+    else
+    {
+        pos = oscilgen->Pbasefuncpar * Sample::bufs_per_oscilgen_par; // fixed oscilgen parameter
+    }
     return sample[idx].smp[pos];
 }
 

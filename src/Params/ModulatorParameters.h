@@ -35,6 +35,8 @@ enum class FMTYPE {
     NONE, MIX, RING_MOD, PHASE_MOD, FREQ_MOD, PW_MOD
 };
 
+inline bool operator!(FMTYPE fmtype) { return fmtype == FMTYPE::NONE; }
+
 class SYNTH_T;
 class FFTwrapper;
 class Resonance;

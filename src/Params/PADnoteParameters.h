@@ -208,7 +208,7 @@ class PADnoteParameters:public Presets, public ModulatorParameters
         // getters/setters for "sample"
         float* curSample(std::size_t idx);
         const float* curSample(std::size_t idx) const;
-        const float* curSampleToPlay(std::size_t idx) const;
+        const float* curSampleToPlay(std::size_t idx, float waveParam = 0.f) const;
         void setCurSample(std::size_t idx, float* vals);
 
         int curSampleSize(std::size_t idx) const {

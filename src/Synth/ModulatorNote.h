@@ -62,16 +62,29 @@ class ModulatorNote
     Envelope *FMFreqEnvelope;
     Envelope *FMAmpEnvelope;
 
-    //! integer part (skip) of the Modullator
-    unsigned int *oscposhiFM, *oscfreqhiFM;
-
-    //! fractional part (skip) of the Modullator
-    float *oscposloFM, *oscfreqloFM;
-
     float FMoldamplitude, FMnewamplitude;
 
     //used by Frequency Modulation (for integration)
     float *FMoldsmp;
+
+protected:
+    // these must be accessible in subclasses:
+
+    //! integer part (skip) of the Modullator
+    unsigned int *oscposhiFM, *oscfreqhiFM;
+    //! fractional part (skip) of the Modullator
+    float *oscposloFM, *oscfreqloFM;
+
+    void fixFMamplitudes()
+    {
+        if(FMnewamplitude > 1.0f)
+            FMnewamplitude = 1.0f;
+        if(FMoldamplitude > 1.0f)
+            FMoldamplitude = 1.0f;
+    }
+    float getFMoldamplitude() const { return FMoldamplitude; }
+    float getFMnewamplitude() const { return FMnewamplitude; }
+    const float* getFMSmp() const { return FMSmp; }
 
 public:
     /*
