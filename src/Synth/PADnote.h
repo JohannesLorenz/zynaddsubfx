@@ -57,6 +57,8 @@ class PADnote:public SynthNote, public ModulatorNote
 
         int nsample, portamento;
 
+        float lastModulate = .0f;
+
         int Compute_Linear(float *outl,
                            float *outr,
                            int freqhi,

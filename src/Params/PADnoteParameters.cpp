@@ -490,7 +490,8 @@ const float* PADnoteParameters::curSampleToPlay(std::size_t idx, float waveParam
     if(Pmode == pad_mode::wavetable && waveParam != 0.f)
     {
         long posI;
-        waveParam = std::max(0.f, std::min(1.f, waveParam));
+        waveParam *= 2.f;
+        waveParam = std::max(-1.f, std::min(1.f, waveParam));
 
         float max_extent = std::min(Pwavepos, (Sample::num_buffers() - 1) - Pwavepos); // in range [0,63]
 
@@ -498,6 +499,8 @@ const float* PADnoteParameters::curSampleToPlay(std::size_t idx, float waveParam
 
         posI = std::max(0l, std::min(((long)Sample::num_buffers()) - 1, posI));
         pos = static_cast<std::size_t>(posI);
+
+//        printf("waveParam: %f, Pwavepos: %f, curSampleToPlay: %lu\n", waveParam, Pwavepos, pos);
     }
     else
     {

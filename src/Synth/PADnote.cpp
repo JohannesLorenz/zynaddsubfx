@@ -199,9 +199,10 @@ void PADnote::setup(float velocity_,
     }
 
     ModulatorNote::setup(pars, memory, 1);
+    ModulatorNote::disableFMVoice();
     ModulatorNote::setupDetune(pars, pars.PDetuneType);
     int pos_avg = (poshi_l + poshi_r) / 2;
-    ModulatorNote::setupVoiceMod(pars, pars, synth, memory, true, true,
+    ModulatorNote::setupVoiceMod(pars, pars, synth, memory, false, true,
                                  realfreq, false, 1, &pos_avg);
     ModulatorNote::setupVoiceFMVol(pars, realfreq, velocity);
     ModulatorNote::setupVoiceMod3(pars, synth, memory, ctl, wm, 0, realfreq, prefix);
@@ -286,7 +287,7 @@ void PADnote::computecurrentparameters()
         powf(ctl.pitchwheel.relfreq, BendAdjust) + OffsetHz;
 
     const float freqrap = 1.f;
-    ModulatorNote::computeCurrentParameters(synth, ctl, realfreq, 0, &freqrap);
+    ModulatorNote::computeCurrentParameters(synth, ctl, realfreq, 1, &freqrap);
 }
 
 
@@ -345,14 +346,19 @@ int PADnote::Compute_Cubic(float *outl,
 
     for(int i = 0; i < synth.buffersize; ++i) {
 
-        float amp;
         if(!!getFMEnabled())
         {
         //for(int i = 0; i < synth.buffersize; ++i) {
-            amp = INTERPOLATE_AMPLITUDE(getFMoldamplitude(),
-                                        getFMnewamplitude(),
-                                        i,
-                                        synth.buffersize);
+            float amp = INTERPOLATE_AMPLITUDE(getFMoldamplitude(),
+                                              getFMnewamplitude(),
+                                              i,
+                                              synth.buffersize);
+
+            lastModulate = lastModulate * (1.0f - amp) + amp
+                    * (getFMSmp()[poshiFM] * (1 - posloFM)
+                       + getFMSmp()[poshiFM + 1] * posloFM);
+
+//            printf("amp: %f, fmsmp: %f %f, posloFM: %f, freqloFM: %f\n", amp, getFMSmp()[poshiFM], getFMSmp()[poshiFM+1], posloFM, freqloFM);
 
             posloFM += freqloFM;
             if(posloFM >= 1.0f) {
@@ -364,9 +370,9 @@ int PADnote::Compute_Cubic(float *outl,
         //}
         }
         else
-            amp = 0.f;
+            lastModulate = 0.f;
 
-        smps = pars.curSampleToPlay(nsample, amp);
+        smps = pars.curSampleToPlay(nsample, lastModulate);
         poshi_l += freqhi;
         poshi_r += freqhi;
         poslo   += freqlo;

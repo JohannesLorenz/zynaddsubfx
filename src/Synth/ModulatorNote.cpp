@@ -54,7 +54,7 @@ void ModulatorNote::setup(const ModulatorParameters &param, Allocator& memory, i
     VoiceOut = nullptr;
 
     FMVoice = param.PFMVoice;
-
+printf("FMVoice = param: %d\n",+FMVoice);
     FMFreqEnvelope = nullptr;
     FMAmpEnvelope  = nullptr;
 
@@ -91,6 +91,7 @@ void ModulatorNote::setupDetune(const ModulatorParameters &voicePar, unsigned ch
 void ModulatorNote::setFMVoice(const ModulatorParameters &voicePar)
 {
     FMVoice = voicePar.PFMVoice;
+    printf("setFMVoice: %d\n",+FMVoice);
 }
 
 void ModulatorNote::setupVoiceMod(const ModulatorParameters &param, const ModulatorParameters &FMVoicePar,
@@ -101,9 +102,10 @@ void ModulatorNote::setupVoiceMod(const ModulatorParameters &param, const Modula
 {
     FMEnabled = (isSoundType) ? param.PFMEnabled : FMTYPE::NONE;
     FMFreqFixed = param.PFMFixedFreq;
-
+printf("alloc? first_run: %d, FMEnabled: %d, FMSmp: %p, FMVoice: %d\n",+first_run, (int)FMEnabled, FMSmp, FMVoice);
     //Triggers when a user enables modulation on a running voice
     if(!first_run && FMEnabled != FMTYPE::NONE && FMSmp == NULL && FMVoice < 0) {
+        printf("alloc!\n");
         param.FMSmp->newrandseed(prng());
         FMSmp = memory.valloc<float>(synth.oscilsize + OSCIL_SMP_EXTRA_SAMPLES);
         memset(FMSmp, 0, sizeof(float)*(synth.oscilsize + OSCIL_SMP_EXTRA_SAMPLES));
