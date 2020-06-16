@@ -484,15 +484,39 @@ void OscilGen::convert2sine()
     prepare();
 }
 
-zyn::WaveTable *zyn::OscilGen::calculateWaveTable() const
+void OscilGen::calculateWaveTableBuffer(float semantic, float freq, float* dest, std::size_t bufsize) const
+{
+    
+}
+
+WaveTable *OscilGen::calculateWaveTable() const
 {
     WaveTable* wt = new WaveTable(synth.oscilsize);
+    wt->setMode(WaveTable::WtMode::freqseed_smps);
+    std::size_t oscilsize = static_cast<std::size_t>(synth.oscilsize);
     /* TODO: generate wave table here... */
     Tensor1<WaveTable::float32>
             freqs(Shape1{WaveTable::num_freqs}),
             semantics(Shape1{WaveTable::num_semantics});
     Tensor3<WaveTable::float32> data(
-            Shape3{WaveTable::num_semantics, WaveTable::num_freqs, static_cast<int>(synth.oscilsize)});
+            Shape3{WaveTable::num_semantics, WaveTable::num_freqs, oscilsize});
+    for(std::size_t i = 0; i < WaveTable::num_semantics; ++i)
+    {
+        semantics[i] = prng();
+    }
+    freqs[0] = 55.f;
+    for(std::size_t i = 1; i < WaveTable::num_freqs; ++i)
+    {
+        freqs[i] = 2.f * freqs[i-1];
+    }
+    for(std::size_t i = 0; i < WaveTable::num_semantics; ++i)
+    {
+        for(std::size_t j = 1; j < WaveTable::num_freqs; ++j)
+        {
+            calculateWaveTableBuffer(semantics[i], freqs[j], data[i][j], oscilsize);
+        }
+    }
+
     wt->insert(data, freqs, semantics, true);
     return wt;
 }

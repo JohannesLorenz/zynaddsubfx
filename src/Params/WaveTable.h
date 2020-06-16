@@ -20,14 +20,14 @@
 namespace zyn {
 
 struct Shape1 {
-    int dim[1];
+    std::size_t dim[1];
     bool operator==(const Shape1& other) const { return dim[0] == other.dim[0]; }
 };
-struct Shape2  { int dim[2];
+struct Shape2  { std::size_t dim[2];
     bool operator==(const Shape2& other) const {
             return dim[0] == other.dim[0] && dim[1] == other.dim[1]; }
 };
-struct Shape3  { int dim[3];
+struct Shape3  { std::size_t dim[3];
     bool operator==(const Shape3& other) const {
              return dim[0] == other.dim[0] && dim[1] == other.dim[1] && dim[2] == other.dim[2]; }
 };
@@ -49,6 +49,9 @@ public:
     Tensor3& operator=(Tensor3&& other) = default;
 
     Shape3 shape() const { return m_shape; }
+    // those operator[] are a bit cheated, but well...
+    T**& operator[](std::size_t i) { return m_data[i]; }
+    const T**& operator[](std::size_t i) const { return m_data[i]; }
     template<class X>
     friend void pointer_swap(Tensor3<X>&, Tensor3<X>&);
 };
@@ -68,6 +71,9 @@ public:
     Tensor2& operator=(Tensor2&& other) = default;
 
     Shape2 shape() const { return m_shape; }
+    // those operator[] are a bit cheated, but well...
+    T*& operator[](std::size_t i) { return m_data[i]; }
+    const T*& operator[](std::size_t i) const { return m_data[i]; }
     template<class X>
     friend void pointer_swap(Tensor2<X>&, Tensor2<X>&);
 };
@@ -86,6 +92,8 @@ public:
     Tensor1& operator=(Tensor1&& other) = default;
 
     Shape1 shape() const { return m_shape; }
+    T& operator[](std::size_t i) { return m_data[i]; }
+    const T& operator[](std::size_t i) const { return m_data[i]; }
     template<class X>
     friend void pointer_swap(Tensor1<X>&, Tensor1<X>&);
 };
@@ -113,12 +121,8 @@ class WaveTable
 public:
     using float32 = float;
     // pure guesses for what sounds good:
-    constexpr const static int num_freqs = 10;
-    constexpr const static int num_semantics = 128;
-private:
-    Tensor1<float32> semantics; //!< E.g. oscil params or random seed (e.g. 0...127)
-    Tensor1<float32> freqs; //!< The frequency of each 'row'
-    Tensor3<float32> data;  //!< time=col,freq=row,semantics(oscil param or random seed)=depth
+    constexpr const static std::size_t num_freqs = 10;
+    constexpr const static std::size_t num_semantics = 128;
 
     enum class WtMode
     {
@@ -127,7 +131,16 @@ private:
         freqwave_smps // (freq, wave param)->samples
     };
 
+private:
+    Tensor1<float32> semantics; //!< E.g. oscil params or random seed (e.g. 0...127)
+    Tensor1<float32> freqs; //!< The frequency of each 'row'
+    Tensor3<float32> data;  //!< time=col,freq=row,semantics(oscil param or random seed)=depth
+    WtMode m_mode;
+
 public:
+
+    void setMode(WtMode mode) { m_mode = mode; }
+
     //! Return sample slice for given frequency
     const Tensor1<float32>& get(float32 freq) const; // works for both seed and seedless setups
     // future extensions
@@ -142,7 +155,7 @@ public:
 
     // future extension
     // Used to determine if new random seeds are needed
-    // int number_of_remaining_seeds(void);
+    // std::size_t number_of_remaining_seeds(void);
 
     WaveTable(std::size_t buffersize);
     WaveTable(WaveTable&& other) = default;
