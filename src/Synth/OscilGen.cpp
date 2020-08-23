@@ -1079,7 +1079,7 @@ bool OscilGen::needPrepare(void)
 /*
  * Get the oscillator function
  */
-short int OscilGen::get(float *smps, float freqHz, int resonance)
+short int OscilGen::get(float *smps, float freqHz, int resonance, bool useSpecialRandSeed, unsigned specialRandSeed)
 {
     if(needPrepare())
         prepare();
@@ -1087,7 +1087,7 @@ short int OscilGen::get(float *smps, float freqHz, int resonance)
     fft_t *input = freqHz > 0.0f ? oscilFFTfreqs : pendingfreqs;
 
     unsigned int realrnd = prng();
-    sprng(randseed);
+    sprng(useSpecialRandSeed ? specialRandSeed : randseed);
 
     int outpos =
         (int)((RND * 2.0f
