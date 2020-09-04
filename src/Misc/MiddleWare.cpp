@@ -347,10 +347,15 @@ struct NonRtObjStore
 
     //! try to dispatch a message at the OscilGen non-RT-ports
     void handleOscilADnote(const char *msg, rtosc::RtData &d) {
+        // relative location of this message (i.e. the OscilGen path)
         const string obj_rl(d.message, msg);
         void *osc = get(obj_rl);
         if(osc)
         {
+            // try forward the message to our non-realtime ports
+            // therefore, change
+            // * loc from "" to the OscilGen path
+            // * d.obj from MiddleWareImplementation to the OscilGen object
             strcpy(d.loc, obj_rl.c_str());
             d.obj = osc;
             OscilGen::non_realtime_ports.dispatch(msg, d);
