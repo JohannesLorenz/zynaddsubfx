@@ -1379,23 +1379,64 @@ void gcc_10_1_0_is_dumb(const std::vector<std::string> &files,
  * BASE/part#/kit#/padpars/oscil/\*
  */
 static rtosc::Ports middwareSnoopPorts = {
+    /*
+        obj_store access
+    */
     {"part#" STRINGIFY(NUM_MIDI_PARTS)
         "/kit#" STRINGIFY(NUM_KIT_ITEMS) "/adpars/VoicePar#"
             STRINGIFY(NUM_VOICES) "/OscilSmp/", 0, &OscilGen::non_realtime_ports,
         rBegin;
-        impl.obj_store.handleOscilADnote(chomp(chomp(chomp(chomp(chomp(msg))))), d);
+        impl.obj_store.handleOscilADnote(chomp(chomp(chomp(chomp(chomp(msg))))), d,
+                                         static_cast<WaveTableRequestHandler&>(impl));
         rEnd},
     {"part#" STRINGIFY(NUM_MIDI_PARTS)
         "/kit#" STRINGIFY(NUM_KIT_ITEMS)
             "/adpars/VoicePar#" STRINGIFY(NUM_VOICES) "/FMSmp/", 0, &OscilGen::non_realtime_ports,
         rBegin
-        impl.obj_store.handleOscilADnote(chomp(chomp(chomp(chomp(chomp(msg))))), d);
+        impl.obj_store.handleOscilADnote(chomp(chomp(chomp(chomp(chomp(msg))))), d,
+                                         static_cast<WaveTableRequestHandler&>(impl));
         rEnd},
     {"part#" STRINGIFY(NUM_MIDI_PARTS)
         "/kit#" STRINGIFY(NUM_KIT_ITEMS) "/padpars/", 0, &PADnoteParameters::non_realtime_ports,
         rBegin
         impl.obj_store.handlePad(chomp(chomp(chomp(msg))), d);
         rEnd},
+    /*
+        catch resonance changes
+    */
+    {"part#" STRINGIFY(NUM_MIDI_PARTS)
+        "/kit#" STRINGIFY(NUM_KIT_ITEMS) "/adpars/VoicePar#"
+            STRINGIFY(NUM_VOICES) "/Presonance:T:F", 0, nullptr,
+        rBegin;
+        int part, kit, voice;
+        idsFromMsg(msg, &part, &kit, &voice);
+        impl.chainWtParamRequest(part, kit, voice, d);
+        d.forward();
+        rEnd},
+    {"part#" STRINGIFY(NUM_MIDI_PARTS)
+        "/kit#" STRINGIFY(NUM_KIT_ITEMS) "/adpars/GlobalPar"
+            "/Reson/", 0, nullptr,
+        rBegin;
+        const char* portname = strstr(msg, "/Reson/");
+        assert(portname);
+        portname += 7;
+        // all resonance ports except
+        if(rtosc_narguments(msg) ||
+           !strcmp(portname, "smooth") || !strcmp(portname, "zero"))
+        {
+            // => this is a modifying message
+            int part, kit, voice;
+            idsFromMsg(msg, &part, &kit, &voice);
+            for(voice = 0; voice < NUM_VOICES; ++voice)
+            {
+                impl.chainWtParamRequest(part, kit, voice, d);
+            }
+        }
+        d.forward();
+        rEnd},
+    /*
+        other
+    */
     {"bank/", 0, &bankPorts,
         rBegin;
         d.obj = &impl.master->bank;
