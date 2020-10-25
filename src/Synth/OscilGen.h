@@ -175,10 +175,15 @@ class OscilGen:public Presets
         bool usesRandom(float freqHz) const;
 
         void calculateWaveTableTensors(Tensor1<wavetable_types::float32>& freqs_input,
-            Tensor1<wavetable_types::IntOrFloat>& semantics_input,
+            Tensor1<wavetable_types::IntOrFloat>& semantics_input,  // TODO: check params
             Tensor3<wavetable_types::float32>& data_input,
             int Presonance,
             bool fillWithZeroes = false) /*const*/;
+        void calculateWaveTableData(const Tensor1<wavetable_types::float32>& freqs,
+            const Tensor1<wavetable_types::IntOrFloat>& semantics,
+            Tensor3<wavetable_types::float32>& data,
+            int Presonance,
+            bool fillWithZeroes = false); // TODO: check params
 
         //Internal Data
         unsigned char oldbasefunc, oldbasepar, oldhmagtype,

@@ -501,7 +501,14 @@ void OscilGen::calculateWaveTableTensors(Tensor1<wavetable_types::float32>& freq
     {
         freqs[i] = 2.f * freqs[i-1];
     }
+}
 
+void OscilGen::calculateWaveTableData(const Tensor1<wavetable_types::float32>& freqs,
+    const Tensor1<wavetable_types::IntOrFloat>& semantics,
+    Tensor3<wavetable_types::float32>& data,
+    int Presonance,
+    bool fillWithZeroes)
+{
     // data
     if(fillWithZeroes)
     {
@@ -545,6 +552,7 @@ WaveTable *OscilGen::calculateWaveTable(int Presonance) /*const*/
             Shape3{num_semantics, num_freqs, oscilsize});
 
     calculateWaveTableTensors(freqs, semantics, data, Presonance);
+    calculateWaveTableData(freqs, semantics, data, Presonance);
 
     wt->insert(data, freqs, semantics, true);
     return wt;
@@ -576,6 +584,13 @@ void OscilGen::recalculateDefaultWaveTable(WaveTable * wt, int Presonance, bool 
     wt->insert(data, freqs, semantics, true);
 
     calculateWaveTableTensors(freqs, semantics, data, Presonance, fillWithZeroes);
+    for(std::size_t i = 0; i < semantics.size(); ++i)
+    {
+        for(std::size_t j = 0; j < freqs.size(); ++j)
+        {
+            getbasefunction(data[i][j].data());
+        }
+    }
 
     wt->insert(data, freqs, semantics, true);
 }
@@ -1237,6 +1252,12 @@ short int OscilGen::get(float *smps, float freqHz, int resonance)
 
     return getFinalOutpos(outpos);
 }
+/*
+// get function if you know that you only want a simple sine
+short int OscilGen::getSine(float *smps)
+{
+    getbasefunction(smps);
+}*/
 
 int OscilGen::calculateOutpos() const
 {
