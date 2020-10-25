@@ -172,6 +172,9 @@ class OscilGen:public Presets, public ClassWithPorts
         //(that's why the sine and cosine components should be processed with a separate call)
         void adaptiveharmonicpostprocess(fft_t *f, int size);
 
+        //! whether the generation of the wave (OscilGen::get) consumes any random
+        bool usesRandom(float freqHz) const;
+
         void calculateWaveTableTensors(Tensor1<wavetable_types::float32>& freqs_input,
             Tensor1<wavetable_types::IntOrFloat>& semantics_input,
             Tensor3<wavetable_types::float32>& data_input,

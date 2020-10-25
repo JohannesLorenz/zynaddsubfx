@@ -1156,8 +1156,16 @@ bool OscilGen::needPrepare(void)
     return outdated == true || oscilprepared == false;
 }
 
+bool OscilGen::usesRandom(float freqHz) const
+{
+    return  ((Prand > 64) && (freqHz >= 0.0f) && (!ADvsPAD)) // phase randomness
+            || ((freqHz > 0.1f) && (!ADvsPAD) && Pamprandtype) // amplitude randomness
+            ;
+}
+
 /*
  * Get the oscillator function
+ * When you change this, also change OscilGen::usesRandom
  */
 short int OscilGen::get(float *smps, float freqHz, int resonance)
 {
