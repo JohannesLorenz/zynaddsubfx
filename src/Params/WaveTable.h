@@ -281,6 +281,15 @@ private:
     Tensor1<IntOrFloat> semantics; //!< E.g. oscil params or random seed (e.g. 0...127)
     Tensor1<float32> freqs; //!< The frequency of each 'row'
     Tensor3<float32> data;  //!< time=col,freq=row,semantics(oscil param or random seed)=depth
+    // semantics... we always compute complete buffers and all frequencies atomically,
+    // but we compute those for each random seed separately
+    // (and different WaveTables separately, of course)
+    // these are like "begin()" and "end()" in STL structures:
+    std::size_t nextProduced = 0, nextConsumed = 0;
+    // number of semantics that *must* be present in the queue
+    constexpr const static std::size_t minimumConsumable = 10; // pure guess
+    std::size_t consumable() const { return (nextProduced + num_semantics - nextConsumed) % num_semantics; }
+
     WtMode m_mode;
 
     std::atomic<std::size_t> reader;

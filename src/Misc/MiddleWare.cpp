@@ -808,6 +808,20 @@ public:
             //but note that previous_master could have been freed already
             master->runOSC(0,0,true, previous_master);
         }
+
+        // anything urgent to do?
+        // (autoSave and offline detection are not considered urgent,
+        // runOsc has just handled all master OSC events)
+        if(lo_server_wait(server, 0) ||
+           bToU->hasNext() ||
+           multi_thread_source.canRead())
+        {
+            // don't do anything, let the caller decide to call tick() again
+        }
+        else
+        {
+
+        }
     }
 
 
