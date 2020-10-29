@@ -588,6 +588,7 @@ void OscilGen::recalculateDefaultWaveTable(WaveTable * wt, int Presonance, bool 
     {
         for(std::size_t j = 0; j < freqs.size(); ++j)
         {
+            // no FFT/IFFT required, it's a simple sine
             getbasefunction(data[i][j].data());
         }
     }
@@ -1252,12 +1253,6 @@ short int OscilGen::get(float *smps, float freqHz, int resonance)
 
     return getFinalOutpos(outpos);
 }
-/*
-// get function if you know that you only want a simple sine
-short int OscilGen::getSine(float *smps)
-{
-    getbasefunction(smps);
-}*/
 
 int OscilGen::calculateOutpos() const
 {

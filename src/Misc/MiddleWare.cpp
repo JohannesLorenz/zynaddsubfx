@@ -2253,9 +2253,9 @@ void MiddleWareImpl::handleMsg(const char *msg)
 
     //A message unmodified by snooping
     if(d.matches == 0 || d.forwarded) {
-        //if(strcmp("/get-vu", msg)) {
-        //    printf("Message Continuing on<%s:%s>...\n", msg, rtosc_argument_string(msg));
-        //}
+        if(strcmp("/get-vu", msg)) {
+            printf("Message Continuing on<%s:%s>...\n", msg, rtosc_argument_string(msg));
+        }
         uToB->raw_write(msg);
     } else {
         //printf("Message Handled<%s:%s>...\n", msg, rtosc_argument_string(msg));
