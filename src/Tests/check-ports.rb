@@ -3,9 +3,10 @@
 require 'open3'
 
 rval=0
+my_path=File.dirname(__FILE__)
 
 # start zyn, grep the lo server port, and connect the port checker to it
-Open3.popen3(Dir.pwd + "/../zynaddsubfx -O null --no-gui") do |stdin, stdout, stderr, wait_thr|
+Open3.popen3(my_path + "/../zynaddsubfx -O null --no-gui") do |stdin, stdout, stderr, wait_thr|
   pid = wait_thr[:pid]
   while line=stderr.gets do 
     # print "line: " + line;
@@ -14,7 +15,7 @@ Open3.popen3(Dir.pwd + "/../zynaddsubfx -O null --no-gui") do |stdin, stdout, st
       # calls OscilGen::get thousands of times in a row to calculate the whole wave table at once.
       # This should be changed once MiddleWare will calculate the wave table bit by bit and will
       # be more responsive.
-      port_checker_rval = system(Dir.pwd + "/../../rtosc/port-checker --timeout 500 'osc.udp://localhost:" + $1 + "/'")
+      port_checker_rval = system(my_path + "/../../rtosc/port-checker --timeout 500 'osc.udp://localhost:" + $1 + "/'")
       if port_checker_rval != true then
         puts "Error: port-checker has returned #{$?.exitstatus}."
         rval=1
