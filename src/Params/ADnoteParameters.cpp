@@ -74,27 +74,6 @@ static const Ports voicePorts = {
             d.reply("/free", "sb", "WaveTable", sizeof(WaveTable*), &unusedWt);
             printf("set ad note parameters, table pointer: %p\n", usedWt);
         }},
-    //Send Messages To Oscillator Realtime Table
-    {"OscilSmp/", rDoc("Primary Oscillator"),
-        &OscilGen::ports,
-        rBOIL_BEGIN
-            if(obj->OscilGn == NULL) return;
-        data.obj = obj->OscilGn;
-        SNIP
-            OscilGen::ports.dispatch(msg, data);
-        if(data.matches == 0)
-            data.forward();
-        rBOIL_END},
-    {"FMSmp/", rDoc("Modulating Oscillator"),
-        &OscilGen::ports,
-        rBOIL_BEGIN
-            if(obj->FmGn == NULL) return;
-        data.obj = obj->FmGn;
-        SNIP
-            OscilGen::ports.dispatch(msg, data);
-        if(data.matches == 0)
-            data.forward();
-        rBOIL_END},
     rRecurp(FreqLfo, "Frequency LFO"),
     rRecurp(AmpLfo, "Amplitude LFO"),
     rRecurp(FilterLfo, "Filter LFO"),

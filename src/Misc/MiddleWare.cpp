@@ -95,6 +95,11 @@ static void liblo_error_cb(int i, const char *m, const char *loc)
     fprintf(stderr, "liblo :-( %d-%s@%s\n",i,m,loc);
 }
 
+// we need to access those earlier
+// bad style?
+static const rtosc::MergePorts& getParameterPorts();
+static const rtosc::Ports& getNonRtParamPorts();
+
 static int handler_function(const char *path, const char *types, lo_arg **argv,
         int argc, lo_message msg, void *user_data)
 {
@@ -122,7 +127,7 @@ static int handler_function(const char *path, const char *types, lo_arg **argv,
     {
         char reply_buffer[1024*20];
         std::size_t length =
-            rtosc::path_search(Master::ports, buffer, 128,
+            rtosc::path_search(getParameterPorts(), buffer, 128,
                                reply_buffer, sizeof(reply_buffer));
         if(length) {
             lo_message msg  = lo_message_deserialise((void*)reply_buffer,
@@ -315,7 +320,7 @@ public:
  ******************************************************************************/
 struct NonRtObjStore
 {
-    std::map<std::string, void*> objmap;
+    std::map<std::string, ClassWithPorts*> objmap;
 
     void extractMaster(Master *master)
     {
@@ -375,14 +380,30 @@ struct NonRtObjStore
 
     void *get(std::string loc)
     {
+        return objmap[loc]->getClass();
+    }
+
+    void *get_or_null(std::string loc)
+    {
+        auto itr = objmap.find(loc);
+        ClassWithPorts* ptr = (itr == objmap.end()) ? nullptr : itr->second;
+        return ptr ? ptr->getClass() : nullptr;
+    }
+
+    ClassWithPorts *getClassWithPorts(std::string loc)
+    {
         return objmap[loc];
     }
 
     //! try to dispatch a message at the OscilGen ports, which are all non-RT
     void handleOscilADnote(const char *msg, bool isFm, rtosc::RtData &d, WaveTableRequestHandler& handler) {
         // relative location of this message (i.e. the OscilGen path)
+        assert(d.message);
+        assert(msg);
+        assert(msg >= d.message);
+        assert(msg - d.message < 256);
         const string obj_rl(d.message, msg);
-        void *osc = get(obj_rl);
+        void *osc = get_or_null(obj_rl);
         if(osc)
         {
             // try to forward the message to our non-realtime ports
@@ -407,13 +428,19 @@ struct NonRtObjStore
                 handler.chainWtParamRequest(part, kit, voice, isFm, d);
             }
         }
-        else
-            fprintf(stderr, "Warning: trying to access oscil object \"%s\","
-                            "which does not exist\n", obj_rl.c_str());
+        else {
+            // print warning, except in rtosc::walk_ports
+            if(obj_rl.find("/pointer") == obj_rl.npos)
+            {
+                fprintf(stderr, "Warning: trying to access oscil object \"%s\","
+                                "which does not exist\n", obj_rl.c_str());
+            }
+            d.obj = nullptr; // tell walk_ports that there's nothing to recurse here...
+        }
     }
     void handlePad(const char *msg, rtosc::RtData &d) {
         string obj_rl(d.message, msg);
-        void *pad = get(obj_rl);
+        void *pad = get_or_null(obj_rl);
         if(!strcmp(msg, "prepare")) {
             preparePadSynth(obj_rl, (PADnoteParameters*)pad, d);
             d.matches++;
@@ -432,10 +459,16 @@ struct NonRtObjStore
                     }
                 }
             }
-            else
-                fprintf(stderr, "Warning: trying to access pad synth object "
-                                "\"%s\", which does not exist\n",
-                        obj_rl.c_str());
+            else {
+                // print warning, except in rtosc::walk_ports
+                if(obj_rl.find("/pointer") == obj_rl.npos)
+                {
+                    fprintf(stderr, "Warning: trying to access pad synth object "
+                                    "\"%s\", which does not exist\n",
+                            obj_rl.c_str());
+                }
+                d.obj = nullptr; // tell walk_ports that there's nothing to recurse here...
+            }
         }
     }
 };
@@ -691,7 +724,11 @@ public:
         return 0;
     }
 
-    int saveMaster(const char *filename, bool osc_format = false)
+    // Save all possible parameters
+    // In user language, this is called "saving a master", but we
+    // are saving parameters owned by Master and by MiddleWare
+    // Return 0 if OK, <0 if not
+    int saveParams(const char *filename, bool osc_format = false)
     {
         int res;
         if(osc_format)
@@ -710,9 +747,98 @@ public:
             master->copyMasterCbTo(&master2);
             master2.frozenState = true;
 
-            doReadOnlyOp([this,filename,&dispatcher,&master2,&res](){
-                             res = master->saveOSC(filename, &dispatcher,
-                                                   &master2);});
+            std::string savefile;
+            rtosc_version m_version =
+            {
+                (unsigned char) version.get_major(),
+                (unsigned char) version.get_minor(),
+                (unsigned char) version.get_revision()
+            };
+            savefile = rtosc::save_to_file(getNonRtParamPorts(), this, "ZynAddSubFX", m_version);
+            savefile += '\n';
+
+            doReadOnlyOp([this,filename,&dispatcher,&master2,&savefile,&res]()
+            {
+                savefile = master->saveOSC(savefile);
+
+                // load the savefile string into another master to compare the results
+                // between the original and the savefile-loaded master
+                // this requires a temporary master switch
+                Master* old_master = master;
+                dispatcher.updateMaster(&master2);
+
+                res = master2.loadOSCFromStr(savefile.c_str(), &dispatcher);
+                // TODO: compare MiddleWare, too?
+
+                // The above call is done by this thread (i.e. the MiddleWare thread), but
+                // it sends messages to master2 in order to load the values
+                // We need to wait until savefile has been loaded into master2
+                int i;
+                for(i = 0; i < 20 && master2.uToB->hasNext(); ++i)
+                    os_usleep(50000);
+                if(i >= 20) // >= 1 second?
+                {
+                    // Master failed to fetch its messages
+                    res = -1;
+                }
+                printf("Saved in less than %d ms.\n", 50*i);
+
+                dispatcher.updateMaster(old_master);
+
+                if(res < 0)
+                {
+                    std::cerr << "invalid savefile (or a backend error)!" << std::endl;
+                    std::cerr << "complete savefile:" << std::endl;
+                    std::cerr << savefile << std::endl;
+                    std::cerr << "first entry that could not be parsed:" << std::endl;
+
+                    for(int i = -res + 1; savefile[i]; ++i)
+                    if(savefile[i] == '\n')
+                    {
+                        savefile.resize(i);
+                        break;
+                    }
+                    std::cerr << (savefile.c_str() - res) << std::endl;
+
+                    res = -1;
+                }
+                else
+                {
+                    char* xml = master->getXMLData(),
+                        * xml2 = master2.getXMLData();
+                    // TODO: below here can be moved out of read only op
+
+                    res = strcmp(xml, xml2) ? -1 : 0;
+
+                    if(res == 0)
+                    {
+                        if(filename && *filename)
+                        {
+                            std::ofstream ofs(filename);
+                            ofs << savefile;
+                        }
+                        else {
+                            std::cout << "The savefile content follows" << std::endl;
+                            std::cout << "---->8----" << std::endl;
+                            std::cout << savefile << std::endl;
+                            std::cout << "---->8----" << std::endl;
+                        }
+                    }
+                    else
+                    {
+                        std::cout << savefile << std::endl;
+                        std::cerr << "Can not write OSC savefile!! (see tmp1.txt and tmp2.txt)"
+                                  << std::endl;
+                        std::ofstream tmp1("tmp1.txt"), tmp2("tmp2.txt");
+                        tmp1 << xml;
+                        tmp2 << xml2;
+                        res = -1;
+                    }
+
+                    free(xml);
+                    free(xml2);
+                }
+            });
         }
         else // xml format
         {
@@ -1348,7 +1474,7 @@ void save_cb(const char *msg, RtData &d)
     if(rtosc_narguments(msg) > 1)
         request_time = rtosc_argument(msg, 1).t;
 
-    int res = impl.saveMaster(file.c_str(), osc_format);
+    int res = impl.saveParams(file.c_str(), osc_format);
     d.broadcast(d.loc, (res == 0) ? "stT" : "stF",
                 file.c_str(), request_time);
 }
@@ -1381,7 +1507,7 @@ void gcc_10_1_0_is_dumb(const std::vector<std::string> &files,
  * BASE/part#/kit#/padpars/prepare
  * BASE/part#/kit#/padpars/oscil/\*
  */
-static rtosc::Ports middwareSnoopPorts = {
+static rtosc::Ports nonRtParamPorts = {
     /*
         obj_store access
     */
@@ -1404,6 +1530,9 @@ static rtosc::Ports middwareSnoopPorts = {
         rBegin
         impl.obj_store.handlePad(chomp(chomp(chomp(msg))), d);
         rEnd},
+};
+
+static rtosc::Ports middwareSnoopPortsWithoutNonRtParams = {
     /*
         catch resonance changes
     */
@@ -1466,6 +1595,72 @@ static rtosc::Ports middwareSnoopPorts = {
         d.obj = impl.config;
         Config::ports.dispatch(chomp(msg), d);
         rEnd},
+    {"presets/copy:s:ss:si:ssi", 0, 0,
+        [](const char *msg, rtosc::RtData &d) {
+            MiddleWareImpl *impl = (MiddleWareImpl*)d.obj;
+            d.obj = (void*)impl->parent;
+            MiddleWare &mw = *impl->parent;
+            assert(d.obj);
+
+            std::string args = rtosc_argument_string(msg);
+            d.reply(d.loc, "s", "clipboard copy...");
+
+            std::string url = rtosc_argument(msg, 0).s;
+            ClassWithPorts* obj = nullptr;
+            if(impl->obj_store.has(url))
+            {
+                obj = impl->obj_store.getClassWithPorts(url);
+            }
+
+            printf("\nClipboard Copy...\n");
+            if(args == "s")
+                presetCopy(mw, url, "", obj);
+            else if(args == "ss")
+                presetCopy(mw, url,
+                            rtosc_argument(msg, 1).s, obj);
+            else if(args == "si")
+                presetCopyArray(mw, url,
+                            rtosc_argument(msg, 1).i, "", obj);
+            else if(args == "ssi")
+                presetCopyArray(mw, url,
+                            rtosc_argument(msg, 2).i, rtosc_argument(msg, 1).s, obj);
+            else
+                assert(false && "bad arguments");
+        }},
+    {"presets/paste:s:ss:si:ssi", 0, 0,
+     [](const char *msg, rtosc::RtData &d) {
+         MiddleWareImpl *impl = (MiddleWareImpl*)d.obj;
+         d.obj = (void*)impl->parent;
+         MiddleWare &mw = *impl->parent;
+         assert(d.obj);
+
+         std::string args = rtosc_argument_string(msg);
+         d.reply(d.loc, "s", "clipboard paste...");
+
+         std::string url = rtosc_argument(msg, 0).s;
+         ClassWithPorts* obj = nullptr;
+         if(impl->obj_store.has(url))
+         {
+             obj = impl->obj_store.getClassWithPorts(url);
+         }
+
+         if(args == "s")
+             presetPaste(mw, url, "", obj);
+         else if(args == "ss")
+             presetPaste(mw, url,
+                         rtosc_argument(msg, 1).s, obj);
+         else if(args == "si")
+             presetPasteArray(mw, url,
+                         rtosc_argument(msg, 1).i, "", obj);
+         else if(args == "ssi")
+             presetPasteArray(mw, url,
+                         rtosc_argument(msg, 2).i, rtosc_argument(msg, 1).s, obj);
+         else
+             assert(false && "bad arguments");
+
+         if(rtosc_argument_string(msg)[0] == 's')
+             d.reply("/damage", "s", rtosc_argument(msg, 0).s);
+        }},
     {"presets/", 0,  &real_preset_ports,          [](const char *msg, RtData &d) {
         MiddleWareImpl *obj = (MiddleWareImpl*)d.obj;
         d.obj = (void*)obj->parent;
@@ -1730,6 +1925,22 @@ static rtosc::Ports middwareSnoopPorts = {
         rEnd
     }
 };
+
+static rtosc::MergePorts middwareSnoopPorts =
+{
+    &nonRtParamPorts,
+    &middwareSnoopPortsWithoutNonRtParams
+};
+
+static rtosc::MergePorts parameterPorts =
+{
+    // order is important: params should be queried on Master first
+    // (because MiddleWare often just redirects, hiding the metadata)
+    &Master::ports,
+    &nonRtParamPorts
+};
+const rtosc::MergePorts& getParameterPorts() { return parameterPorts; }
+const rtosc::Ports& getNonRtParamPorts() { return nonRtParamPorts; }
 
 static rtosc::Ports middlewareReplyPorts = {
     {"echo:ss", 0, 0,
@@ -2504,6 +2715,12 @@ void MiddleWare::switchMaster(Master* new_master)
         // this will be done by calling the mastercb
         transmitMsg("/switch-master", "b", sizeof(Master*), &new_master);
     }
+}
+
+std::string MiddleWare::getUrlType(std::string url)
+{
+    auto self = middwareSnoopPorts.apropos((url + "self").c_str());
+    return (self) ? self->meta()["class"] : "";
 }
 
 }
