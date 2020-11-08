@@ -320,7 +320,7 @@ public:
  ******************************************************************************/
 struct NonRtObjStore
 {
-    std::map<std::string, void*> objmap;
+    std::map<std::string, ClassWithPorts*> objmap;
 
     void extractMaster(Master *master)
     {
@@ -380,7 +380,14 @@ struct NonRtObjStore
 
     void *get(std::string loc)
     {
-        return objmap[loc];
+        ClassWithPorts* ptr = getClassWithPorts(loc);
+        return ptr ? ptr->getClass() : nullptr;
+    }
+
+    ClassWithPorts *getClassWithPorts(std::string loc)
+    {
+        auto itr = objmap.find(loc);
+        return (itr == objmap.end()) ? nullptr : itr->second;
     }
 
     //! try to dispatch a message at the OscilGen ports, which are all non-RT
@@ -1569,6 +1576,72 @@ static rtosc::Ports middwareSnoopPortsWithoutNonRtParams = {
         d.obj = impl.config;
         Config::ports.dispatch(chomp(msg), d);
         rEnd},
+    {"presets/copy:s:ss:si:ssi", 0, 0,
+        [](const char *msg, rtosc::RtData &d) {
+            MiddleWareImpl *impl = (MiddleWareImpl*)d.obj;
+            d.obj = (void*)impl->parent;
+            MiddleWare &mw = *impl->parent;
+            assert(d.obj);
+
+            std::string args = rtosc_argument_string(msg);
+            d.reply(d.loc, "s", "clipboard copy...");
+
+            std::string url = rtosc_argument(msg, 0).s;
+            ClassWithPorts* obj = nullptr;
+            if(impl->obj_store.has(url))
+            {
+                obj = impl->obj_store.getClassWithPorts(url);
+            }
+
+            printf("\nClipboard Copy...\n");
+            if(args == "s")
+                presetCopy(mw, url, "", obj);
+            else if(args == "ss")
+                presetCopy(mw, url,
+                            rtosc_argument(msg, 1).s, obj);
+            else if(args == "si")
+                presetCopyArray(mw, url,
+                            rtosc_argument(msg, 1).i, "", obj);
+            else if(args == "ssi")
+                presetCopyArray(mw, url,
+                            rtosc_argument(msg, 2).i, rtosc_argument(msg, 1).s, obj);
+            else
+                assert(false && "bad arguments");
+        }},
+    {"presets/paste:s:ss:si:ssi", 0, 0,
+     [](const char *msg, rtosc::RtData &d) {
+         MiddleWareImpl *impl = (MiddleWareImpl*)d.obj;
+         d.obj = (void*)impl->parent;
+         MiddleWare &mw = *impl->parent;
+         assert(d.obj);
+
+         std::string args = rtosc_argument_string(msg);
+         d.reply(d.loc, "s", "clipboard paste...");
+
+         std::string url = rtosc_argument(msg, 0).s;
+         ClassWithPorts* obj = nullptr;
+         if(impl->obj_store.has(url))
+         {
+             obj = impl->obj_store.getClassWithPorts(url);
+         }
+
+         if(args == "s")
+             presetPaste(mw, url, "", obj);
+         else if(args == "ss")
+             presetPaste(mw, url,
+                         rtosc_argument(msg, 1).s, obj);
+         else if(args == "si")
+             presetPasteArray(mw, url,
+                         rtosc_argument(msg, 1).i, "", obj);
+         else if(args == "ssi")
+             presetPasteArray(mw, url,
+                         rtosc_argument(msg, 2).i, rtosc_argument(msg, 1).s, obj);
+         else
+             assert(false && "bad arguments");
+
+         if(rtosc_argument_string(msg)[0] == 's')
+             d.reply("/damage", "s", rtosc_argument(msg, 0).s);
+        }},
     {"presets/", 0,  &real_preset_ports,          [](const char *msg, RtData &d) {
         MiddleWareImpl *obj = (MiddleWareImpl*)d.obj;
         d.obj = (void*)obj->parent;
@@ -2623,6 +2696,12 @@ void MiddleWare::switchMaster(Master* new_master)
         // this will be done by calling the mastercb
         transmitMsg("/switch-master", "b", sizeof(Master*), &new_master);
     }
+}
+
+std::string MiddleWare::getUrlType(std::string url)
+{
+    auto self = middwareSnoopPorts.apropos((url + "self").c_str());
+    return (self) ? self->meta()["class"] : "";
 }
 
 }

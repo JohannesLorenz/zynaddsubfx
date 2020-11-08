@@ -86,6 +86,8 @@ class MiddleWare
         //!Make @p new_master the current master
         //!@warning use with care, and only in frozen state
         void switchMaster(Master* new_master);
+
+        static std::string getUrlType(std::string url);
     private:
         class MiddleWareImpl *impl;
 };
