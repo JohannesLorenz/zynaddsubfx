@@ -27,3 +27,5 @@ jobs:
       run: cd build && make
     - name: make test
       run: cd build && make test
+    - name: make test verbose
+      run: cd build && ctest -V
