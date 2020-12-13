@@ -172,14 +172,18 @@ char *rtosc_splat(const char *path, std::set<std::string>);
         rObject *obj = (rObject*)d.obj; \
         d.reply(d.loc, "s", obj->type);}}
 
-#define rPaste \
+#define rPasteInternal(doReply) \
 rPresetType, \
 {"paste:b", rProp(internal) rDoc("paste port"), 0, \
     [](const char *m, rtosc::RtData &d){ \
         printf("rPaste...\n"); \
         rObject &paste = **(rObject **)rtosc_argument(m,0).b.data; \
         rObject &o = *(rObject*)d.obj;\
-        o.paste(paste);}}
+        o.paste(paste);\
+        if(doReply) { \
+            d.reply("/rt_paste_done", "s", d.loc);}}}
+#define rPaste rPasteInternal(false)
+#define rPasteAndReply rPasteInternal(true)
 
 #define rArrayPaste \
 {"paste-array:bi", rProp(internal) rDoc("array paste port"), 0, \

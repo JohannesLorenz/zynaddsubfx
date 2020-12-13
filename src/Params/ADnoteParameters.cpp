@@ -80,14 +80,26 @@ static const Ports voicePorts = {
         rBOIL_BEGIN
         if(obj->OscilGn == NULL) return;
         data.obj = obj->OscilGn;
-        data.forward();
+        if(strstr(msg, "paste"))
+        {
+            SNIP
+            OscilGen::ports.dispatch(msg, data);
+        }
+        else
+            data.forward();
         rBOIL_END},
     {"FMSmp/", rDoc("Modulating Oscillator"),
         &OscilGen::ports,
         rBOIL_BEGIN
         if(obj->FmGn == NULL) return;
         data.obj = obj->FmGn;
-        data.forward();
+        if(strstr(msg, "paste"))
+        {
+            SNIP
+            OscilGen::ports.dispatch(msg, data);
+        }
+        else
+            data.forward();
         rBOIL_END},
     rRecurp(FreqLfo, "Frequency LFO"),
     rRecurp(AmpLfo, "Amplitude LFO"),
