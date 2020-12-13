@@ -2494,9 +2494,12 @@ void MiddleWareImpl::handleMsg(const char *msg, bool msg_comes_from_realtime)
             //printf("Message from RT will not be replied to RT: <%s:%s>...\n",
             //       msg, rtosc_argument_string(msg));
         } else {
-            //if(strcmp("/get-vu", msg)) {
-            //    printf("Message Continuing on<%s:%s>...\n", msg, rtosc_argument_string(msg));
-            //}
+            if(false && strcmp("/get-vu", msg) && strcmp("/vu-meter", msg) && strcmp("/active_keys", msg) && strcmp("/watch/add", msg)) {
+                printf("Message Continuing on<%s:%s>...\n", msg, rtosc_argument_string(msg));
+                printf("Reasons:\n");
+                if(d.matches == 0) { printf("- no matches\n"); }
+                if(d.forwarded) { printf("- forwarded\n"); }
+            }
             uToB->raw_write(msg);
         }
     } else {

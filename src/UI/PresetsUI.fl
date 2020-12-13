@@ -205,7 +205,7 @@ class PresetsUI {} {
 
     if(but) {
         osc->write("/presets/paste", "si", url.c_str(), idx);
-        pui->refresh();
+        /*pui->refresh();*/
     } else {
         rescan(url_);
         pastewin->show();
@@ -257,7 +257,7 @@ class PresetsUI {} {
 
             if(but) {
                 osc->write("/presets/paste", "s", url.c_str());
-                pui->refresh();
+                /*pui->refresh();*/
             } else {
                 rescan(url_);
                 pastewin->show();
