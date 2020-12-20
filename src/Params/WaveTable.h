@@ -67,37 +67,55 @@ public:
     }
 };
 
-//! Common Tensor base class for all dimensions
+/**
+    Common Tensor base class for all dimensions
+
+    m_usable <= m_size_planned <= m_capacity
+    m_usable: data that has been generated and can be used
+    m_size_planned: data that shall be generated (after generation,
+                    m_usable == m_size_planned)
+    m_capacity: allocated size
+*/
 template <std::size_t N, class T>
 class TensorBase
 {
 protected:
     std::size_t m_capacity;
-    bool     m_owner = true; //! says if memory is owned by us
+    std::size_t m_size_planned, m_usable;
+    bool m_owner = true; //!< says if memory is owned by us
 
-    TensorBase() : m_capacity(0), m_owner(false) {}
-    TensorBase(std::size_t capacity) : m_capacity(capacity), m_owner(true) {};
+    TensorBase() : m_capacity(0), m_size_planned(0), m_usable(0), m_owner(false) {}
+    TensorBase(std::size_t capacity) : m_capacity(capacity), m_size_planned(capacity), m_usable(0), m_owner(true) {};
 
     TensorBase(TensorBase&& other) {
         m_capacity = other.capacity;
+        m_size_planned = other.m_size_planned;
+        m_usable = other.m_usable;
         m_owner = other.m_owner;
         other.m_owner = false;
     }
     TensorBase& operator=(TensorBase&& other) {
         m_capacity = other.m_capacity;
+        m_size_planned = other.m_size_planned;
+        m_usable = other.m_usable;
         m_owner = other.m_owner;
         other.m_owner = false;
     }
+    // TODO: check rule of 5
 public:
     std::size_t capacity() const { return m_capacity; }
+    std::size_t size_planned() const { return m_size_planned; }
+    std::size_t usable() const { return m_usable; }
 protected:
-    void reserve_capacity(std::size_t new_capacity) { m_capacity = new_capacity; m_owner = true; }
+    void set_capacity(std::size_t new_capacity) { m_capacity = new_capacity; m_owner = true; }
     bool operator==(const TensorBase<N, T>& other) const {
 #if 0
         return shape() == other.shape();/* &&
                 std::equal(m_data, m_data + (shape().volume()), other.m_data);*/ }
 #else
-        return m_capacity == other.m_capacity;
+        return m_capacity == other.m_capacity &&
+                m_size_planned == other.m_size_planned &&
+                m_usable == other.m_usable;
 #endif
     }
 
@@ -128,7 +146,7 @@ public:
     }
     void init_shape(const Shape<N>& shape)
     {
-        base_type::reserve_capacity(shape.dim[0]);
+        base_type::set_capacity(shape.dim[0]);
         m_data = new Tensor<N-1, T>[base_type::capacity()];
         init_shape_alloced(shape);
     }
@@ -188,8 +206,8 @@ public:
         }
     }
 
-    template<std::size_t N2, class X2>
-    friend void pointer_swap(Tensor<N2, X2>&, Tensor<N2, X2>&);
+//    template<std::size_t N2, class X2>
+//    friend void pointer_swap(Tensor<N2, X2>&, Tensor<N2, X2>&);
 };
 
 //! Tensor class for dimension 1
@@ -211,7 +229,7 @@ public:
 
     void init_shape(const Shape<1>& shape)
     {
-        base_type::reserve_capacity(shape.dim[0]);
+        base_type::set_capacity(shape.dim[0]);
         m_data = new T[base_type::capacity()];
     }
 
@@ -242,23 +260,24 @@ public:
     }
 
     Shape<1> shape() const { return Shape<1>{base_type::capacity()}; }
-
-    template<std::size_t N2, class X2>
-    friend void pointer_swap(Tensor<N2, X2>&, Tensor<N2, X2>&);
 };
 
 using Shape1 = Shape<1>;
 using Shape2 = Shape<2>;
 using Shape3 = Shape<3>;
 
+#if 0
 //! swap data of two tensors
 template<std::size_t N, class T>
 void pointer_swap(Tensor<N, T>& t1, Tensor<N, T>& t2)
 {
     std::swap(t1.m_capacity, t2.m_capacity);
+    std::swap(t1.m_size_planned, t2.m_size_planned);
+    std::swap(t1.m_usable, t2.m_usable);
     std::swap(t1.m_data, t2.m_data);
     std::swap(t1.m_owner, t2.m_owner);
 }
+#endif
 
 class WaveTable
 {
@@ -301,11 +320,14 @@ public:
     //! @param semantics seed or param
     void insert(Tensor3<float32> &data, Tensor1<float32>& freqs, Tensor1<IntOrFloat> &semantics, bool invalidate=true);
 
+    //void insert(Tensor1<float32> &buffer, bool invalidate=true);
+
     // future extension
     // Used to determine if new random seeds are needed
     // std::size_t number_of_remaining_seeds(void);
 
     WaveTable(std::size_t buffersize);
+    // TODO: rule of 5
     WaveTable(WaveTable&& other) = default;
     WaveTable& operator=(WaveTable&& other) = default;
 };

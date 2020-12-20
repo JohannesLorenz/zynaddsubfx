@@ -57,7 +57,7 @@ class OscilGen:public Presets
         //! initial calculation for pre-allocated wavetable, no allocations
         //! @param fillWithZeroes if true, all buffers will be zero, and no random will be consumed
         void recalculateDefaultWaveTable(WaveTable*, bool fillWithZeroes = false);
-        //! allocating a small wavetable without any waves
+        //! allocating a wavetable with full capacity and without any waves
         WaveTable *allocWaveTable() const;
 
         //Parameters
