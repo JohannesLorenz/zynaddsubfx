@@ -175,11 +175,10 @@ class OscilGen:public Presets
             Tensor1<wavetable_types::IntOrFloat>& semantics_input,
             bool fillWithZeroes = false) /*const*/;
         //! calculate the wave table audio buffers
-        void calculateWaveTableData(const Tensor1<wavetable_types::float32>& freqs,
-            const Tensor1<wavetable_types::IntOrFloat>& semantics,
-            Tensor3<wavetable_types::float32>& data,
-            int Presonance,
-            bool fillWithZeroes = false); // TODO: check params
+        void calculateWaveTableData(wavetable_types::float32 freq,
+            wavetable_types::IntOrFloat& semantic,
+            Tensor1<wavetable_types::float32>& data,
+            int Presonance);
 
         //Internal Data
         unsigned char oldbasefunc, oldbasepar, oldhmagtype,

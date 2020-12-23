@@ -521,28 +521,13 @@ void OscilGen::calculateWaveTableScales(Tensor1<wavetable_types::float32>& freqs
     }
 }
 
-void OscilGen::calculateWaveTableData(const Tensor1<wavetable_types::float32>& freqs,
-    const Tensor1<wavetable_types::IntOrFloat>& semantics,
+void OscilGen::calculateWaveTableData(wavetable_types::float32 freq,
+    wavetable_types::IntOrFloat& semantic,
     Tensor1<wavetable_types::float32>& data,
-    int Presonance,
-    bool fillWithZeroes)
+    int Presonance)
 {
-    // data
-    if(fillWithZeroes)
-    {
-        data.fillWithZeroes(); // avoid uninitialized reads
-    }
-    else
-    {
-        for(std::size_t i = 0; i < semantics.capacity(); ++i)
-        {
-            for(std::size_t j = 0; j < freqs.capacity(); ++j)
-            {
-                newrandseed(semantics[i].intVal);
-                get(data[i][j].data(), freqs[j], Presonance);
-            }
-        }
-    }
+    newrandseed(semantic.intVal);
+    get(data.data(), freq, Presonance);
 }
 
 WaveTable *OscilGen::calculateWaveTable(int Presonance) /*const*/
