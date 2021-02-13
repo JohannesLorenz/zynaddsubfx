@@ -26,7 +26,7 @@ namespace zyn {
 
 const Tensor1<WaveTable::float32>& WaveTable::get(float32 freq)
 {
-    std::size_t num_freqs = freqs.size(), i;
+    std::size_t num_freqs = std::min(data[data.read_pos()].size(),freqs.size()), i;
     float bestFreqDist = 9999999;
     std::size_t bestI = 0;
     for(i = 0; i < num_freqs; ++i) // TODO: std::lower_bound?
@@ -45,15 +45,29 @@ const Tensor1<WaveTable::float32>& WaveTable::get(float32 freq)
         }
     }
     assert(bestI < num_freqs);
-    const Tensor1<WaveTable::float32>& res = data[data.read_pos()][bestI];
-    data.inc_read_pos();
+    // TODO: hide this logic in WaveTable struct
+    const Tensor1<WaveTable::float32>& res =
+        (data.size()>1 && data.read_space() == 0)
+            // previous element
+            ? data[(data.read_pos() + data.size() - 1) % data.size()][bestI]
+            // normal case
+            : data[data.read_pos()][bestI];
+    if(data.read_space()) {
+        data.dump();
+        data.inc_read_pos();
+    }
+    else {
+        // then either, there was no read space (we just read the previous
+        // element), or the size was 1 (nothing to increase)
+    }
     return res;
 }
 
 WaveTable::WaveTable(std::size_t buffersize) :
     semantics(Shape1{1}, Shape1{0}),
     freqs(Shape1{1}, Shape1{0}),
-    data(Shape3{1, 1, buffersize}, Shape3{0, 0, 0})
+    data(Shape3{1, 1, buffersize}, Shape3{0, 0, 0}),
+    next_tensor3(Shape3{1, 1,buffersize}, Shape3{0, 0, 0}) /* TODO: test with 0 */
 {
     setMode(WtMode::freqseed_smps);
 }

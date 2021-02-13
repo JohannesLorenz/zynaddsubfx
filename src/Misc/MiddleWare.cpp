@@ -1078,7 +1078,9 @@ public:
                     // send new tensor3, but only if the parameters changed at all
                     // TODO: condition is correct, but the new tensor3 is only required if
                     // semantic size changed
-                    if(params.param_change_time)
+
+                    if(params.param_change_time) // TODO: currently, param_change_time is !=0 for
+                    // parameter changes where the Tensor3 size is unchanged, too!
                     {
                         const Shape3 tensor3Shape{(size_t)params.semantics->size(),
                                                   (size_t)params.freqs->size(),
@@ -1113,9 +1115,17 @@ public:
                         }
 
                         // send Tensor2 for the current semantic
+                        const char args[5] = {
+                            params.isFm ? 'T' : 'F',
+                            'i', // parameter change?
+                            'i', 'b', 0
+                        };
                         // no snoop ports, send this directly to RT
-                        uToB->write((params.voicePath + "set-waves").c_str(), params.isFm ? "Tib" : "Fib", s, sizeof(Tensor2<WaveTable::float32>*), (uint8_t*)&newTensor);
+                        uToB->write((params.voicePath + "set-waves").c_str(), args, params.param_change_time, s, sizeof(Tensor2<WaveTable::float32>*), (uint8_t*)&newTensor);
                     }
+                }
+                else {
+                    printf("WT: MW dropping outdated WT request %d\n",params.param_change_time);
                 }
 
                 waveTablesToGenerate.pop();
@@ -2168,8 +2178,6 @@ static rtosc::Ports middlewareReplyPorts = {
         // add request to queue, allow new requests for this OscilGen again
         rBegin;
 
-        printf("WT: MW received wt-request, queuing...\n");
-
         MiddleWareImpl::waveTablesToGenerateStruct wt2g;
 
         unsigned offs;
@@ -2198,7 +2206,7 @@ static rtosc::Ports middlewareReplyPorts = {
             offs = 3;
         }
         wt2g.isFm      = rtosc_argument(msg, offs+0).T;
-        wt2g.param_change_time = rtosc_argument(msg, offs+1).T;
+        wt2g.param_change_time = rtosc_argument(msg, offs+1).i;
         wt2g.write_pos  = rtosc_argument(msg, offs+2).i;
         wt2g.write_space= rtosc_argument(msg, offs+3).i;
         wt2g.semantics = *(Tensor1<WaveTable::IntOrFloat>**)rtosc_argument(msg, offs+4).b.data;
@@ -2208,6 +2216,7 @@ static rtosc::Ports middlewareReplyPorts = {
         // (TODO: might be done later when handling the queue)
         impl.waveTableRequestHandler.receivedAdPars(wt2g.part, wt2g.kit, wt2g.voice, wt2g.isFm);
 
+        printf("WT: MW received wt-request (timestamp %d), queuing...\n", wt2g.param_change_time);
         impl.addWaveTableToGenerate(std::move(wt2g));
         rEnd},
     {"rt_paste_done:s", 0, 0,
