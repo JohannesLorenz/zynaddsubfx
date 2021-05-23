@@ -24,6 +24,11 @@
 
 namespace zyn {
 
+tensor_size_t WaveTable::findBestIndex(float freq) const
+{
+    return zyn::findBestIndex(freqs, freq);
+}
+
 tensor_size_t findBestIndex(const Tensor<1, wavetable_types::float32>& freqs, float freq)
 {
     auto not_less_than_freq = std::lower_bound(freqs.begin(), freqs.end(), freq);
@@ -43,7 +48,7 @@ tensor_size_t findBestIndex(const Tensor<1, wavetable_types::float32>& freqs, fl
 const Tensor1<WaveTable::float32>& WaveTable::get(float32 freq)
 {
     assert(mode() != WtMode::freqwave_smps);
-    tensor_size_t bestI = findBestIndex(freqs, freq);
+    tensor_size_t bestI = findBestIndex(freq);
 
     AbstractRingbuffer& rb = data.ringbuffers[bestI];
     assert(data[rb.read_pos()].size() == freqs.size());
@@ -68,11 +73,10 @@ const Tensor1<WaveTable::float32>& WaveTable::get(float32 freq)
     return res;
 }
 
-const Tensor1<WaveTable::float32>& WaveTable::getWaveAt(float32 freq, std::size_t semantic) const
+const Tensor1<WaveTable::float32>& WaveTable::getWaveAt(tensor_size_t freq_idx, std::size_t semantic) const
 {
     assert(mode() == WtMode::freqwave_smps);
-    tensor_size_t bestI = findBestIndex(freqs, freq);
-    return data[semantic][bestI];
+    return data[semantic][freq_idx];
 }
 
 WaveTable::WaveTable(tensor_size_t buffersize) :

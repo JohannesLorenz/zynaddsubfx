@@ -582,10 +582,12 @@ public:
     void setMode(WtMode mode) { m_mode = mode; }
     WtMode mode() const { return m_mode; }
 
+    //! Find best index in freq tensor to play frequency freq
+    tensor_size_t findBestIndex(float freq) const;
     //! Return sample slice for given frequency
     const Tensor1<float32> &get(float32 freq); // works for both seed and seedless setups
     //! Return whole table for all values of wave parameters
-    const Tensor1<float32> &getWaveAt(float32 freq, std::size_t semantic) const;
+    const Tensor1<float32> &getWaveAt(tensor_size_t freq_idx, std::size_t semantic) const;
     // future extensions
     // Tensor2<float32> get_antialiased(void); // works for seed and seedless setups
     // Tensor2<float32> get_wavetablemod(float32 freq);

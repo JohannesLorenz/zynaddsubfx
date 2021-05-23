@@ -1778,6 +1778,7 @@ inline void ADnote::ComputeVoiceOscillatorWaveTableModulation(int nvoice)
         // debugging variables:
         // float minpar = 1.0f, maxpar = 0.0f;
 
+        const tensor_size_t freqIndex = wt->findBestIndex(freq);
         for(int i = 0; i < synth.buffersize; ++i) {
 
             // float oscil_pos = (float)poshi;  // unused variable
@@ -1797,10 +1798,9 @@ inline void ADnote::ComputeVoiceOscillatorWaveTableModulation(int nvoice)
             if(semantic >= wt->size_semantics())
                 semantic = wt->size_semantics() - 1;
 
-            // TODO: frequency computation is always constant! re-use same freq index
             // get the two waves where semantic is between its indices
-            const Tensor1<WaveTable::float32>& waveA = wt->getWaveAt(freq, semantic);
-            const Tensor1<WaveTable::float32>& waveB = wt->getWaveAt(freq, semantic<(wt->size_semantics() - 1)? semantic+1 : semantic);
+            const Tensor1<WaveTable::float32>& waveA = wt->getWaveAt(freqIndex, semantic);
+            const Tensor1<WaveTable::float32>& waveB = wt->getWaveAt(freqIndex, semantic<(wt->size_semantics() - 1)? semantic+1 : semantic);
             // fractional part of semantic is the lerp parameter
             const float semantic_fractional = semantic - floor(semantic);
             // calculate current sample of both waves 
