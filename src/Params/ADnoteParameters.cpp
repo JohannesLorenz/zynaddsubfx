@@ -155,8 +155,6 @@ static const Ports voicePorts = {
 
 
     //Modulator Stuff
-    rOption(PFMEnabled, rShort("mode"), rOptions(none, mix, ring, phase,
-                frequency, pulse, wave), rDefault(none), "Modulator mode"),
     rParamI(PFMVoice,                   rShort("voice"), rDefault(-1),
         "Modulator Oscillator Selection"),
     rParamF(FMvolume,                   rShort("vol."),  rLinear(0.0, 100.0),
@@ -180,6 +178,43 @@ static const Ports voicePorts = {
             "Modulator Frequency Envelope"),
     rToggle(PFMAmpEnvelopeEnabled,   rShort("enable"), rDefault(false),
             "Modulator Amplitude Envelope"),
+    {"PFMEnabled::i:c:S",rProp(parameter) rProp(enumerated)
+        rShort("mode") rOptions(none, mix, ring, phase,
+        frequency, pulse, wave) rDefault(none) "Modulator mode", NULL,
+        rBOIL_BEGIN
+            if(!strcmp("", args)) {
+                data.reply(loc, "i", static_cast<int>(obj->PFMEnabled));
+            } else {
+                bool fromStr = !strcmp("s", args) || !strcmp("S", args);
+                int var = fromStr
+                        ? enum_key(prop, rtosc_argument(msg, 0).s)
+                        : rtosc_argument(msg, 0).i;
+                if(fromStr) {
+                    assert(!prop["min"] || var >= atoi(prop["min"]));
+                    assert(!prop["max"] || var <= atoi(prop["max"]));
+                }
+                rLIMIT(var, atoi)
+                if((int)obj->PFMEnabled != var)
+                {
+                    if(var == (int)FMTYPE::WAVE_MOD || obj->PFMEnabled == FMTYPE::WAVE_MOD)
+                    {
+                        data.reply("/request-wavetable", var == (int)FMTYPE::WAVE_MOD ? "sFTii" : "sFFii",
+                                 // path to this voice (T+F give the OscilGen of this voice)
+                                 data.loc,
+                                 // tensor relevant parameter change time (none)
+                                 0,
+                                 // wavetable parameters (currently, only Presonance)
+                                 (int)obj->Presonance);
+                    }
+
+                    rCAPPLY(obj->PFMEnabled, i, obj->PFMEnabled = static_cast<std::remove_reference<decltype(obj->PFMEnabled)>::type>(var))
+                    data.broadcast(loc, fromStr ? "i" : rtosc_argument_string(msg),
+                                   obj->PFMEnabled);
+                    rChangeCb;
+                }
+            }
+        rBOIL_END
+    },
 
 
 

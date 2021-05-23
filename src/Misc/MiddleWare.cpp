@@ -2231,8 +2231,7 @@ static rtosc::Ports middlewareReplyPorts = {
         {
             // fill wt2g.voicePath
             wt2g.voicePath = rtosc_argument(msg, argpos++).s; // it's *not yet* the voice path
-            string::size_type pos = wt2g.voicePath.find("wavetable-params-changed");
-            assert(pos == wt2g.voicePath.length() - strlen("wavetable-params-changed"));
+            string::size_type pos = wt2g.voicePath.rfind('/') + 1;
             wt2g.voicePath.resize(pos); // *now* it's the voice location
             // fill p/k/v
             bool res = idsFromMsg(wt2g.voicePath.c_str(), &wt2g.part, &wt2g.kit, &wt2g.voice);
