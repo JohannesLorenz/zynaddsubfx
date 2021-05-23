@@ -1702,17 +1702,6 @@ inline void ADnote::ComputeVoiceOscillatorFrequencyModulation(int nvoice,
     }
 }
 
-template<class T>
-float rmsValue(const T& smps, size_t N)
-{
-    float sum = 0.0f;
-    for(size_t i = 0; i < N; ++i)
-        sum += std::norm(smps[i]);
-    if(sum < 1e-6f)
-        return 1.0f;  // data is all ~zero, do not amplify noise
-    return sqrt(sum / N);
-}
-
 /*
  * Computes the Oscillator (WaveTable Modulation)
  */
@@ -1823,11 +1812,10 @@ inline void ADnote::ComputeVoiceOscillatorWaveTableModulation(int nvoice)
                        / (1.0f*(1<<24));
             // lerp between these samples
             tw[i] = (1.0f - semantic_fractional) * twA + semantic_fractional * twB;
-            float rms = rmsValue(waveA, waveA.size()); // TODO: required?
 
             //printf("%f %f [%d->%f]: %f %f -> rms %f\n",freq,semantic,(int)oscil_pos,(float)(oscil_pos + oscilsize_inv),wave[oscil_pos],wave[oscil_pos + oscilsize_inv], rms);
 
-            tw[i] *= 0.5f / rms;
+            tw[i] *= 0.5f;
             poslo += freqlo;
             poshi += freqhi + (poslo>>24);
             poslo &= 0xffffff;
