@@ -1747,8 +1747,11 @@ void ADnoteVoiceParam::requestWavetables(rtosc::ThreadLink* bToU, int part, int 
             printf("WT: AD WT %p requesting new wavetable (reason: outdated)\n",
                    wt);
 #endif
-
-            bToU->write("/request-wavetable", isModOsc ? "iiiTii" : "iiiFii",
+            char argStr[] = "iii??ii";
+            argStr[3] = isModOsc ? 'T' : 'F';
+            argStr[4] = (!isModOsc && PFMEnabled == FMTYPE::WAVE_MOD)
+                          ? 'T' : 'F';
+            bToU->write("/request-wavetable", argStr,
                     // path to this voice (T+F give the OscilGen of this voice)
                     part, kit, voice,
                     // tensor relevant parameter change time (none)
