@@ -1761,12 +1761,13 @@ inline void ADnote::ComputeVoiceOscillatorWaveTableModulation(int nvoice)
                 tw[i] *= vce.FMnewamplitude;
         }
 
+    // WaveTable-specific code begins here
+    assert(vce.OscilSmp.isWaveTable);
     const float freq = getvoicebasefreq(nvoice);
+    const WaveTable* wt = NoteVoicePar[nvoice].OscilSmp.table;
+    const tensor_size_t freqIndex = wt->findBestIndex(freq);
 
-    // WaveTable-specific code
     for(int k = 0; k < vce.unison_size; ++k) {
-        assert(vce.OscilSmp.isWaveTable);
-        const WaveTable* wt = NoteVoicePar[nvoice].OscilSmp.table;
         int    poshi  = vce.oscposhi[k];
         int    poslo  = vce.oscposlo[k] * (1<<24);
         int    freqhi = vce.oscfreqhi[k];
@@ -1778,7 +1779,6 @@ inline void ADnote::ComputeVoiceOscillatorWaveTableModulation(int nvoice)
         // debugging variables:
         // float minpar = 1.0f, maxpar = 0.0f;
 
-        const tensor_size_t freqIndex = wt->findBestIndex(freq);
         for(int i = 0; i < synth.buffersize; ++i) {
 
             // float oscil_pos = (float)poshi;  // unused variable
@@ -1813,7 +1813,7 @@ inline void ADnote::ComputeVoiceOscillatorWaveTableModulation(int nvoice)
             // lerp between these samples
             tw[i] = (1.0f - semantic_fractional) * twA + semantic_fractional * twB;
 
-            //printf("%f %f [%d->%f]: %f %f -> rms %f\n",freq,semantic,(int)oscil_pos,(float)(oscil_pos + oscilsize_inv),wave[oscil_pos],wave[oscil_pos + oscilsize_inv], rms);
+            //printf("%f %f [%d,%d]: %f %f -> %f\n",freq,semantic,(int)poshi,(int)poslo,twA,twB, tw[i]);
 
             tw[i] *= 0.5f;
             poslo += freqlo;
