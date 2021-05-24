@@ -1758,7 +1758,7 @@ inline void ADnote::ComputeVoiceOscillatorWaveTableModulation(int nvoice)
         for(int k = 0; k < vce.unison_size; ++k) {
             float *tw = tmpwave_unison[k];
             for(i = 0; i < synth.buffersize; ++i)
-            tw[i] *= vce.FMnewamplitude;
+                tw[i] *= vce.FMnewamplitude;
         }
 
     const float freq = getvoicebasefreq(nvoice);
