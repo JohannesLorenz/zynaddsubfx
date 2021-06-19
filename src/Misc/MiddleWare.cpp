@@ -664,6 +664,11 @@ private:
     std::queue<std::vector<char>> msgsToHandle;
     // pending jobs, will be completed when MW is not very busy
     std::queue<waveTablesToGenerateStruct> waveTablesToGenerate;
+    // age of oldest message in the wavetable queue
+    // only required for debugging what happens when MW replies too slow
+    // (or possibly profiling in the future)
+    unsigned wt_queue_age = 0;
+    static constexpr unsigned wt_queue_max_age = 0; // > 0 only for debugging
 public:
     MiddleWare *parent;
     Config* const config;
@@ -1013,6 +1018,16 @@ public:
 
     void calculateWavetables()
     {
+        if(wt_queue_age < wt_queue_max_age)
+        {
+            ++wt_queue_age;
+            return;
+        }
+        else
+        {
+            wt_queue_age = 0;
+        }
+
         // calculate all pending requests at once for now (can be changed)
         while(!waveTablesToGenerate.empty())
         {
