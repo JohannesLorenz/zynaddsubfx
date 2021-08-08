@@ -13,6 +13,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <limits>
 #include <math.h>
 
 #include "ADnoteParameters.h"
