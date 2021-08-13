@@ -472,8 +472,46 @@ void ADnote::setupVoiceMod(int nvoice, bool first_run)
 
     if (param.Type != 0)
         voice.FMEnabled = FMTYPE::NONE;
-    else
+    else {
+        // switch WT->non-WT or non-WT-WT?
+        if((param.PFMEnabled == FMTYPE::WAVE_MOD) !=
+           (voice.FMEnabled == FMTYPE::WAVE_MOD))
+        {
+            // store previous FMEnabled
+            voice.FMEnabledBeforeWtSwitch = voice.FMEnabled;
+        }
         voice.FMEnabled = param.PFMEnabled;
+    }
+
+    // voice.FMEnabled ist what the user wants to play
+    // wt_mode is what is actually available
+    const WaveTable::WtMode wt_mode = pars.VoicePar[nvoice].table->mode();
+
+    // if the table is not (yet?) updated to match the current mode,
+    // use the mode from the table
+    if((voice.FMEnabled == FMTYPE::WAVE_MOD)
+       == (wt_mode == wavetable_types::WtMode::freqwave_smps))
+    {
+        if(NoteVoicePar[nvoice].FMEnabledBeforeWtSwitch != voice.FMEnabled
+           && !NoteVoicePar[nvoice].FMEnabledCorrectedLastTime)
+        {
+            // re-precompute stuff depending on "WaveTable::mode()",
+            // which is equal to "fmenabled"
+            fillOscilSmpFromWt(nvoice);
+            NoteVoicePar[nvoice].FMEnabledCorrectedLastTime = true;
+        }
+    }
+    else
+    {
+        // re-precompute stuff depending on WaveTable::mode()
+        fillOscilSmpFromWt(nvoice); // TODO: only once
+        // correct FM mode that will be played
+        voice.FMEnabled = (wt_mode == wavetable_types::WtMode::freqwave_smps)
+                        ? FMTYPE::WAVE_MOD
+                        : NoteVoicePar[nvoice].FMEnabledBeforeWtSwitch;
+        NoteVoicePar[nvoice].FMEnabledCorrectedLastTime = false;
+    }
+
 
     voice.FMFreqFixed  = param.PFMFixedFreq;
 

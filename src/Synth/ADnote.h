@@ -251,7 +251,8 @@ class ADnote:public SynthNote
             *   MODULLATOR PARAMETERS   *
             ****************************/
 
-            FMTYPE FMEnabled;
+            FMTYPE FMEnabled, FMEnabledBeforeWtSwitch;
+            bool FMEnabledCorrectedLastTime = true;
 
             unsigned char FMFreqFixed;
 
