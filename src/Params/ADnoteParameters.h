@@ -315,8 +315,6 @@ struct ADnoteVoiceParam {
 
     //! carrier tensor for random-seed (not wavetable modulation)
     class WaveTable* table = nullptr;
-    //! carrier tensor for wavetable modulation
-    class WaveTable* tableWaveMod = nullptr;
     //! modulator tensor
     class WaveTable* tableMod = nullptr;
 
