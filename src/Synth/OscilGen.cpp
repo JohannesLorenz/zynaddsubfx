@@ -484,9 +484,11 @@ public:
     }
 };
 
-wavetable_types::WtMode OscilGen::calculateWaveTableMode(bool forceWtMode) const
+wavetable_types::WtMode OscilGen::calculateWaveTableMode(bool forceWtMode, bool isExternal)
 {
     using WtMode = wavetable_types::WtMode;
+    if(!isExternal)
+        ++m_wavetable_generation_time;
     if(forceWtMode)
     {
         return WtMode::freqwave_smps;
@@ -577,6 +579,7 @@ void OscilGen::recalculateDefaultWaveTable(WaveTable * wt) const
     wt->setMode(WaveTable::WtMode::freq_smps);
     wt->setFreq(0, 55.f);
     wt->setSemantic(0, wavetable_types::IntOrFloat{.intVal=0});
+    wt->setGenerationTime(0);
 
     // no FFT/IFFT required, it's a simple sine
     // (the currently selected base function is still sine)

@@ -103,7 +103,7 @@ entry points, marked with an "X".
     | If the wavetable request comes from a parameter change,   |
     | or the current wavetable is not outdated                  |
     |<---request-wavetable                                      |
-    |    :sTFii:iiiTFii:sFTii:sFFii:iiiFTii:iiiFFii-------------|
+    |    :sTFiii:iiiTFiii:sFTiii:sFFiii:iiiFTiii:iiiFFiii-------|
     |      Inform MW that new waves can be generated            | 
     |      - path of OscilGen (s or iii is voice path, T/F is   |
     |        OscilGen path)                                     |
@@ -114,6 +114,7 @@ entry points, marked with an "X".
     |          0 (parameter change timestamp is implicitly the  |
     |             one of the latest parameter change which      |
     |             ADnote observed)                              |
+    |      - external modulator index (or -1 if none)           |
     |      - Presonance boolean (i)                             |
     |      - if triggered by waves consumed:                    |
     |        quadrupel (semantic + freq indices,                |

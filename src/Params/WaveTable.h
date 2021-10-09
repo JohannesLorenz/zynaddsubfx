@@ -522,6 +522,9 @@ private:
     // in the next cycle
     bool m_require_update_request = false;
 
+    // unique counter of wavetable generation time
+    unsigned m_generation_time;
+
 public:
     float get_freq(tensor_size_t freq_idx) const { return freqs[freq_idx]; }
     IntOrFloat get_sem(tensor_size_t sem_idx) const { return semantics[sem_idx]; }
@@ -576,6 +579,7 @@ public:
         std::swap(m_mode, unused.m_mode);
         std::swap(timestamp_current, unused.timestamp_current);
         std::swap(timestamp_requested, unused.timestamp_requested);
+        std::swap(m_generation_time, unused.m_generation_time);
         assert(semantics.size() <= max_semantics_ever);
     }
 
@@ -597,6 +601,9 @@ public:
     void setDataAt(tensor_size_t semanticIdx, tensor_size_t freqIdx, tensor_size_t bufIdx, float to) { data[semanticIdx][freqIdx][bufIdx] = to; }
     void swapDataAt(tensor_size_t semanticIdx, tensor_size_t freqIdx, Tensor1<float32>& new_data) {
         data[semanticIdx][freqIdx].swapWith(new_data); }
+
+    void setGenerationTime(int time) { m_generation_time = time; }
+    int generationTime() const { return m_generation_time; }
 
     //! Insert generated data into this object
     //! If this is only adding new random seeds, then the rest of the data does

@@ -640,6 +640,8 @@ public:
         std::string voicePath;
         int part, kit, voice; // redundant to voice path
         bool isModOsc, isWtMod;
+        int extMod;
+        bool isExtMod() const { return extMod != -1; }
         int param_change_time;
         int presonance;
         struct wave_request
@@ -1036,9 +1038,19 @@ public:
                 params.part, params.kit, params.voice, params.isModOsc,
                 params.param_change_time))
             {
+                std::string oscilGenStr = params.voicePath;
+                if(oscilGenStr.back() == '/')
+                    oscilGenStr.resize(oscilGenStr.size()-1);
+                if(params.isExtMod())
+                {
+                    while(isdigit(oscilGenStr.back()))
+                        oscilGenStr.resize(oscilGenStr.size()-1);
+                    oscilGenStr += std::to_string(params.extMod);
+                }
+                oscilGenStr += (params.isModOsc ? "/FMSmp/" : "/OscilSmp/");
+                // the generating oscilGen (can be internal or external)
                 OscilGen* oscilGen = static_cast<OscilGen*>(
-                     obj_store.get(params.voicePath +
-                                        (params.isModOsc ? "FMSmp/" : "OscilSmp/")));
+                     obj_store.get(oscilGenStr));
 
                 wavetable_types::WtMode wtMode;
                 // hack:
@@ -1055,10 +1067,10 @@ public:
                 {
                     Tensor1<WaveTable::float32>* unused_freqs; // non-constant
                     Tensor1<WaveTable::IntOrFloat>* unused_semantics;
-                    wtMode = oscilGen->calculateWaveTableMode(params.isWtMod);
+                    wtMode = oscilGen->calculateWaveTableMode(params.isWtMod, params.isExtMod());
                     std::tie(unused_freqs, unused_semantics) = oscilGen->calculateWaveTableScales(wtMode);
                     // hack: pointing to these arrays is OK, because the swap
-                    // in ADnoteParamters will not touch the array
+                    // in ADnoteParameters will not touch the array
                     // (and it will not get deleted until MW has delivered a
                     // further Tensor)
                     freqs_array = unused_freqs->data();
@@ -1072,6 +1084,8 @@ public:
                     newWt->setMode(wtMode);
                     newWt->swapFreqsInitially(*unused_freqs);
                     newWt->swapSemanticsInitially(*unused_semantics);
+                    newWt->setGenerationTime(oscilGen->wavetableGenerationTime());
+
                     delete unused_freqs;
                     delete unused_semantics;
                     const WaveTable* wt = newWt; // from now, kept const in this function
@@ -2233,7 +2247,7 @@ static rtosc::Ports middlewareReplyPorts = {
         rEnd},
     {"broadcast:", 0, 0, rBegin; impl.broadcast = true; rEnd},
     {"forward:", 0, 0, rBegin; impl.forward = true; rEnd},
-    {"request-wavetable:sTFii:iiiTFii:sFTii:sFFii:iiiFTii:iiiFFii", 0, 0,
+    {"request-wavetable:sTFiii:iiiTFiii:sFTiii:sFFiii:iiiFTiii:iiiFFiii", 0, 0,
         // add request to queue, allow new requests for this OscilGen again
         rBegin;
 
@@ -2265,6 +2279,7 @@ static rtosc::Ports middlewareReplyPorts = {
         wt2g.isWtMod           = rtosc_argument(msg, argpos++).T;
         assert(!(wt2g.isModOsc && wt2g.isWtMod));
         wt2g.param_change_time = rtosc_argument(msg, argpos++).i;
+        wt2g.extMod            = rtosc_argument(msg, argpos++).i;
         wt2g.presonance        = rtosc_argument(msg, argpos++).i;
         unsigned nargs = rtosc_narguments(msg);
         for(; argpos < nargs; argpos+=4)

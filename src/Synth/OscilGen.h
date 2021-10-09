@@ -62,7 +62,7 @@ class OscilGen:public Presets
             wavetable_types::WtMode wtMode,
             int Presonance);
         //! calculate wave table mode, i.e. meaning + handling of semantics
-        wavetable_types::WtMode calculateWaveTableMode(bool forceWtMode) const;
+        wavetable_types::WtMode calculateWaveTableMode(bool forceWtMode, bool isExternal);
         //! calculate freqs + semantics
         std::pair<Tensor1<wavetable_types::float32>*, Tensor1<wavetable_types::IntOrFloat>*>
             calculateWaveTableScales(wavetable_types::WtMode wtMode) const;
@@ -197,8 +197,12 @@ class OscilGen:public Presets
         Resonance *res;
 
         unsigned int randseed;
+
+        int m_wavetable_generation_time = 0;
     public:
         const SYNTH_T &synth;
+
+        int wavetableGenerationTime() const { return m_wavetable_generation_time; }
 };
 
 typedef float filter_func_t(unsigned int, float, float);

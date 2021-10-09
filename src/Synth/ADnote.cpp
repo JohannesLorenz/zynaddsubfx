@@ -109,7 +109,7 @@ int ADnote::fillOscilSmpFromWt(int nvoice)
 
     //Get the voice's oscil or external's voice oscil
     int vc = nvoice;
-    if(pars.VoicePar[nvoice].Pextoscil != -1)
+    if(pars.VoicePar[nvoice].Pextoscil != -1 && !waveTables)
         vc = pars.VoicePar[nvoice].Pextoscil;
     int oscposhi_start;
 
@@ -142,6 +142,7 @@ int ADnote::fillOscilSmpFromWt(int nvoice)
     }
     else
     {
+        // debug code for old tests
         voice.OscilSmp.smps = memory.valloc<float>(buf_alloc_size);
         if(!pars.GlobalPar.Hrandgrouping)
             pars.VoicePar[vc].OscilGn->newrandseed(prng());
@@ -532,7 +533,7 @@ void ADnote::setupVoiceMod(int nvoice, bool first_run)
                 || (voice.FMEnabled == FMTYPE::RING_MOD))
             tmp = getFMvoicebasefreq(nvoice);
 
-        if(!waveTables)
+        if(!waveTables) // debug code for testing only
             if(!pars.GlobalPar.Hrandgrouping)
                 pars.VoicePar[vc].FmGn->newrandseed(prng());
 
@@ -540,12 +541,13 @@ void ADnote::setupVoiceMod(int nvoice, bool first_run)
         {
             if(waveTables)
             {
-                assert(pars.VoicePar[vc].tableMod); // did you allocate ADnoteParameters and not assign its "table" member?
-                const float* bufferInTable = pars.VoicePar[vc].tableMod->get(tmp).data();
+                assert(pars.VoicePar[nvoice].tableMod); // did you allocate ADnoteParameters and not assign its "table" member?
+                const float* bufferInTable = pars.VoicePar[nvoice].tableMod->get(tmp).data();
                 std::copy(bufferInTable, bufferInTable + synth.oscilsize, voice.FMSmp);
-                voice.oscposhiFM[k] = pars.VoicePar[vc].OscilGn->getFinalOutpos() % synth.oscilsize;
+                // probably a bug that OscilGn is used: (TODO)
+                voice.oscposhiFM[k] = pars.VoicePar[nvoice].OscilGn->getFinalOutpos() % synth.oscilsize;
             }
-            else
+            else // debug code for testing only
             {
                 voice.oscposhiFM[k] = (voice.oscposhi[k]
                         + pars.VoicePar[vc].FmGn->get(
@@ -809,7 +811,7 @@ void ADnote::legatonote(const LegatoParams &lpars)
             if(pars.VoicePar[nvoice].PextFMoscil != -1)
                 vc = pars.VoicePar[nvoice].PextFMoscil;
 
-            if(!waveTables)
+            if(!waveTables) // debug code, testing only
                 if(!pars.GlobalPar.Hrandgrouping)
                     pars.VoicePar[vc].FmGn->newrandseed(prng());
 
@@ -1011,7 +1013,7 @@ void ADnote::initparameters(WatchManager *wm, const char *prefix)
                || (vce.FMEnabled == FMTYPE::RING_MOD))
                 tmp = getFMvoicebasefreq(nvoice);
 
-            if(!waveTables)
+            if(!waveTables) // debug code, testing only
                 if(!pars.GlobalPar.Hrandgrouping)
                     pars.VoicePar[vc].FmGn->newrandseed(prng());
 
@@ -1019,12 +1021,12 @@ void ADnote::initparameters(WatchManager *wm, const char *prefix)
             {
                 if(waveTables)
                 {
-                    assert(pars.VoicePar[vc].tableMod); // did you allocate ADnoteParameters and not assign its "table" member?
-                    const float* bufferInTable = pars.VoicePar[vc].tableMod->get(tmp).data();
+                    assert(pars.VoicePar[nvoice].tableMod); // did you allocate ADnoteParameters and not assign its "table" member?
+                    const float* bufferInTable = pars.VoicePar[nvoice].tableMod->get(tmp).data();
                     std::copy(bufferInTable, bufferInTable + synth.oscilsize, vce.FMSmp);
-                    vce.oscposhiFM[k] = pars.VoicePar[vc].OscilGn->getFinalOutpos() % synth.oscilsize;
+                    vce.oscposhiFM[k] = pars.VoicePar[nvoice].OscilGn->getFinalOutpos() % synth.oscilsize; // TODO: bug: OscilGn
                 }
-                else
+                else // debug code, testing only
                 {
                     vce.oscposhiFM[k] = (vce.oscposhi[k]
                                              + pars.VoicePar[vc].FmGn->get(

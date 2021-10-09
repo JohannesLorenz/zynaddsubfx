@@ -73,6 +73,47 @@ static const Ports voicePorts = {
         "Voice Startup Delay"),
     rToggle(Presonance,      rShort("enable"), rDefault(true),
         "Resonance Enable"),
+    {"Pextoscil::i",       rProp(parameter) rDefault(-1) rShort("ext.")
+                           rMap(min, -1) rMap(max, 16)
+                           rDoc("External Oscillator Selection"), NULL,
+        rBOIL_BEGIN
+            bool change = (strcmp("", args))?(rtosc_argument(msg, 0).i != obj->Pextoscil):false;
+            auto cb = rParamICb(Pextoscil);
+            cb(msg, data);
+            if(change)
+            {
+                data.reply("/request-wavetable", (obj->PFMEnabled == FMTYPE::WAVE_MOD) ? "sFTiii" : "sFFiii",
+                   // path to this voice (T+F give the OscilGen of this voice)
+                   data.loc,
+                   // tensor relevant parameter change time (none)
+                   0,
+                   // wavetable parameters
+                   (int)obj->Pextoscil,
+                   (int)obj->Presonance);
+                obj->table->setGenerationTime(-1);
+            }
+        rBOIL_END},
+    {"PextFMoscil::i",     rProp(parameter) rDefault(-1) rShort("ext.")
+                           rMap(min, -1) rMap(max, 16)
+                           rDoc("External FM Oscillator Selection"), NULL,
+        rBOIL_BEGIN
+            // analogue to Pextoscil
+            bool change = (strcmp("", args))?(rtosc_argument(msg, 0).i != obj->PextFMoscil):false;
+            auto cb = rParamICb(PextFMoscil);
+            cb(msg, data);
+            if(change)
+            {
+                data.reply("/request-wavetable", (obj->PFMEnabled == FMTYPE::WAVE_MOD) ? "sTTiii" : "sTFiii",
+                   // path to this voice (T+F give the OscilGen of this voice)
+                   data.loc,
+                   // tensor relevant parameter change time (none)
+                   0,
+                   // wavetable parameters
+                   (int)obj->PextFMoscil,
+                   0);
+                obj->table->setGenerationTime(-1);
+            }
+        rBOIL_END},
     rParamI(Pextoscil,       rDefault(-1),     rShort("ext."),
             rMap(min, -1), rMap(max, 16), "External Oscillator Selection"),
     rParamI(PextFMoscil,     rDefault(-1),     rShort("ext."),
@@ -199,12 +240,13 @@ static const Ports voicePorts = {
                 {
                     if(var == (int)FMTYPE::WAVE_MOD || obj->PFMEnabled == FMTYPE::WAVE_MOD)
                     {
-                        data.reply("/request-wavetable", var == (int)FMTYPE::WAVE_MOD ? "sFTii" : "sFFii",
+                        data.reply("/request-wavetable", var == (int)FMTYPE::WAVE_MOD ? "sFTiii" : "sFFiii",
                                  // path to this voice (T+F give the OscilGen of this voice)
                                  data.loc,
                                  // tensor relevant parameter change time (none)
                                  0,
-                                 // wavetable parameters (currently, only Presonance)
+                                 // wavetable parameters
+                                 (int)obj->Pextoscil,
                                  (int)obj->Presonance);
                     }
 
@@ -354,7 +396,7 @@ static const Ports voicePorts = {
                 printf("WT: AD WT %p requesting (max) new 2D Tensors (reason: params changed)...\n",
                        wt);
 #endif
-                char argStr[] = "s??ii";
+                char argStr[] = "s??iii";
                 argStr[1] = isModOsc ? 'T' : 'F';
                 argStr[2] = (!isModOsc && obj->PFMEnabled == FMTYPE::WAVE_MOD)
                               ? 'T' : 'F';
@@ -365,7 +407,8 @@ static const Ports voicePorts = {
                         d.loc,
                         // tensor relevant parameter change time
                         param_change_time,
-                        // wavetable parameters (currently, only Presonance)
+                        // wavetable parameters
+                        isModOsc ? (int)obj->PextFMoscil : (int)obj->Pextoscil,
                         isModOsc ? 0 : (int)obj->Presonance);
                 // don't mark the whole ringbuffer (-1) as "write requested"
                 // because the current Tensor3 will be swapped before it will
@@ -1662,6 +1705,30 @@ void ADnoteVoiceParam::getfromXML(XMLwrapper& xml, unsigned nvoice)
 
 void ADnoteParameters::requestWavetables(rtosc::ThreadLink* bToU, int part, int kit)
 {
+    // update any table which uses an external oscil
+    // (because updating external voices only generates tables for themselves)
+    for (std::size_t v = 0; v < NUM_VOICES; ++v)
+    {
+        int ext = VoicePar[v].Pextoscil;
+        if(ext != -1)
+        {
+            if(VoicePar[v].table->generationTime() < VoicePar[ext].table->generationTime())
+            {
+                VoicePar[v].requestWavetable(bToU, part, kit, v, false);
+                VoicePar[v].table->setGenerationTime(VoicePar[ext].table->generationTime()); // forbid re-sending requests
+            }
+        }
+        ext = VoicePar[v].PextFMoscil;
+        if(ext != -1)
+        {
+            if(VoicePar[v].tableMod->generationTime() < VoicePar[ext].tableMod->generationTime())
+            {
+                VoicePar[v].requestWavetable(bToU, part, kit, v, true);
+                VoicePar[v].tableMod->setGenerationTime(VoicePar[ext].tableMod->generationTime()); // forbid re-sending requests
+            }
+        }
+    }
+
     // for AD note, all waves exist in memory, so we compute wavetables for
     // all of them, even for user-disabled voices (common case)
     // usually, user-disabled voices are plain sine waves, so this is fast
@@ -1669,6 +1736,23 @@ void ADnoteParameters::requestWavetables(rtosc::ThreadLink* bToU, int part, int 
     {
         VoicePar[v].requestWavetables(bToU, part, kit, v);
     }
+}
+
+
+void ADnoteVoiceParam::requestWavetable(rtosc::ThreadLink* bToU, int part, int kit, int voice, bool isModOsc) const
+{
+    char argStr[] = "iii??iii";
+    argStr[3] = isModOsc ? 'T' : 'F';
+    argStr[4] = (!isModOsc && PFMEnabled == FMTYPE::WAVE_MOD)
+                  ? 'T' : 'F';
+    bToU->write("/request-wavetable", argStr,
+            // path to this voice (T+F give the OscilGen of this voice)
+            part, kit, voice,
+            // tensor relevant parameter change time (none)
+            0,
+            // wavetable parameters
+            isModOsc ? (int)PextFMoscil : (int)Pextoscil,
+            isModOsc ? 0 : (int)Presonance);
 }
 
 void ADnoteVoiceParam::requestWavetables(rtosc::ThreadLink* bToU, int part, int kit, int voice)
@@ -1708,7 +1792,8 @@ void ADnoteVoiceParam::requestWavetables(rtosc::ThreadLink* bToU, int part, int 
                     *sptr++ = 'F'; // "table"/"tableMod" are never WT-modulation
                     // parameter change time (none)
                     *sptr++ = 'i'; aptr++->i = 0;
-                    // wavetable parameters (Presonance)
+                    // wavetable parameters
+                    *sptr++ = 'i'; aptr++->i = isModOsc ? (int)PextFMoscil : (int)Pextoscil;
                     *sptr++ = 'i'; aptr++->i = isModOsc ? 0 : (int)Presonance;
                     // semantics and freqs of waves that need to be regenerated
                     tensor_size_t imax = write_pos + write_space;
@@ -1748,7 +1833,7 @@ void ADnoteVoiceParam::requestWavetables(rtosc::ThreadLink* bToU, int part, int 
             printf("WT: AD WT %p requesting new wavetable (reason: outdated)\n",
                    wt);
 #endif
-            char argStr[] = "iii??ii";
+            char argStr[] = "iii??iii";
             argStr[3] = isModOsc ? 'T' : 'F';
             argStr[4] = (!isModOsc && PFMEnabled == FMTYPE::WAVE_MOD)
                           ? 'T' : 'F';
@@ -1757,7 +1842,8 @@ void ADnoteVoiceParam::requestWavetables(rtosc::ThreadLink* bToU, int part, int 
                     part, kit, voice,
                     // tensor relevant parameter change time (none)
                     0,
-                    // wavetable parameters (currently, only Presonance)
+                    // wavetable parameters
+                    isModOsc ? (int)PextFMoscil : (int)Pextoscil,
                     isModOsc ? 0 : (int)Presonance);
             // don't mark the whole ringbuffer (-1) as "write requested"
             // because the current Tensor3 will be swapped before it will

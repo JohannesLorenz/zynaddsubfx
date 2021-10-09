@@ -124,6 +124,9 @@ struct ADnoteVoiceParam {
     //! write WT requests into *bToU for those OscilGens in this voice
     //! that require it
     void requestWavetables(rtosc::ThreadLink* bToU, int part, int kit, int voice);
+    //! send one single wavetable request via *bToU
+    void requestWavetable(rtosc::ThreadLink* bToU, int part, int kit, int voice, bool isModOsc) const;
+
 
     /** If the voice is enabled */
     unsigned char Enabled;
