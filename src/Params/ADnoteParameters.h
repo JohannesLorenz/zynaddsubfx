@@ -17,6 +17,10 @@
 #include "../globals.h"
 #include "PresetsArray.h"
 
+namespace rtosc {
+    struct RtData;
+}
+
 namespace zyn {
 
 enum class FMTYPE {
@@ -126,6 +130,8 @@ struct ADnoteVoiceParam {
     void requestWavetables(rtosc::ThreadLink* bToU, int part, int kit, int voice);
     //! send one single wavetable request via *bToU
     void requestWavetable(rtosc::ThreadLink* bToU, int part, int kit, int voice, bool isModOsc) const;
+    //! send one single wavetable as a reply (data.loc must contain the location)
+    void requestWavetable(rtosc::RtData& data, bool isModOsc) const;
 
 
     /** If the voice is enabled */
