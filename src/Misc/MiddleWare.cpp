@@ -41,6 +41,7 @@
 #include "PresetExtractor.h"
 #include "../Containers/MultiPseudoStack.h"
 #include "../Params/PresetsStore.h"
+#include "../Synth/Resonance.h"
 #include "../Params/ADnoteParameters.h"
 #include "../Params/SUBnoteParameters.h"
 #include "../Params/PADnoteParameters.h"
@@ -335,19 +336,20 @@ class PasteStateHandler
 //#define DBG_PASTE_STATE_HANDLER
 
     enum class pasteStateType { notInUse, inProgress };
-    pasteStateType pasteState[NUM_MIDI_PARTS][NUM_KIT_ITEMS][NUM_VOICES][2];
+    enum { resoId = NUM_VOICES };
+    pasteStateType pasteState[NUM_MIDI_PARTS][NUM_KIT_ITEMS][NUM_VOICES+1][2];
 
 public:
     PasteStateHandler()
     {
         for(std::size_t p = 0; p < NUM_MIDI_PARTS; ++p)
         for(std::size_t k = 0; k < NUM_KIT_ITEMS; ++k)
-        for(std::size_t v = 0; v < NUM_VOICES; ++v)
+        for(std::size_t v = 0; v < resoId; ++v)
         for(std::size_t i = 0; i < 2; ++i)
             pasteState[p][k][v][i] = pasteStateType::notInUse;
     }
 
-    void notifyPasteDone(int part, int kit, int voice, bool isModOsc)
+    void notifyPasteDoneOscil(int part, int kit, int voice, bool isModOsc)
     {
 #ifdef DBG_PASTE_STATE_HANDLER
         printf("paste done: %d %d %d %s\n", part, kit, voice, isModOsc?"Mod-Oscil":"Oscil");
@@ -355,21 +357,46 @@ public:
         pasteState[part][kit][voice][isModOsc] = pasteStateType::notInUse;
     }
 
-    void notifyPasteBegin(int part, int kit, int voice, bool isModOsc)
+    void notifyPasteBeginOscil(int part, int kit, int voice, bool isModOsc)
     {
 #ifdef DBG_PASTE_STATE_HANDLER
-        printf("paste begin: %d %d %d %s\n", part, kit, voice, isModOsc?"Mod-Oscil":"Oscil");
+        printf("paste begin: %d %d reso\n", part, kit);
 #endif
         pasteState[part][kit][voice][isModOsc] = pasteStateType::inProgress;
     }
 
-    bool isPasteInProgress(int part, int kit, int voice, bool isModOsc) const
+    void notifyPasteDoneReso(int part, int kit)
+    {
+#ifdef DBG_PASTE_STATE_HANDLER
+        printf("paste done: %d %d reso\n", part, kit);
+#endif
+        pasteState[part][kit][resoId][0] = pasteStateType::notInUse;
+    }
+
+    void notifyPasteBeginReso(int part, int kit)
+    {
+#ifdef DBG_PASTE_STATE_HANDLER
+        printf("paste begin reso: %d %d reso\n", part, kit);
+#endif
+        pasteState[part][kit][resoId][0] = pasteStateType::inProgress;
+    }
+
+    bool isPasteInProgressOscil(int part, int kit, int voice, bool isModOsc) const
     {
 #ifdef DBG_PASTE_STATE_HANDLER
         printf("paste in progress? %d %d %d %s -> %s\n", part, kit, voice, isModOsc?"Mod-Oscil":"Oscil",
                pasteState[part][kit][voice][isModOsc] == pasteStateType::inProgress ? "yes":"no");
 #endif
         return pasteState[part][kit][voice][isModOsc] == pasteStateType::inProgress;
+    }
+
+    bool isPasteInProgressReso(int part, int kit) const
+    {
+#ifdef DBG_PASTE_STATE_HANDLER
+        printf("paste in progress? %d %d reso -> %s\n", part, kit,
+               pasteState[part][kit][resoId][0] == pasteStateType::inProgress ? "yes":"no");
+#endif
+        return pasteState[part][kit][resoId][0] == pasteStateType::inProgress;
     }
 };
 
@@ -414,11 +441,13 @@ struct NonRtObjStore
             std::string nbase = base+"adpars/VoicePar"+to_s(k)+"/";
             if(adpars) {
                 auto &nobj = adpars->VoicePar[k];
-                objmap[nbase+"OscilSmp/"] = nobj.OscilGn;
-                objmap[nbase+"FMSmp/"]    = nobj.FmGn;
+                objmap[nbase+"OscilSmp/"]              = nobj.OscilGn;
+                objmap[nbase+"FMSmp/"]                 = nobj.FmGn;
+                objmap[base+"adpars/GlobalPar/Reson/"] = adpars->GlobalPar.Reson;
             } else {
-                objmap[nbase+"OscilSmp/"] = nullptr;
-                objmap[nbase+"FMSmp/"]    = nullptr;
+                objmap[nbase+"OscilSmp/"]              = nullptr;
+                objmap[nbase+"FMSmp/"]                 = nullptr;
+                objmap[base+"adpars/GlobalPar/Reson/"] = nullptr;
             }
         }
     }
@@ -453,11 +482,69 @@ struct NonRtObjStore
         return (itr == objmap.end()) ? nullptr : itr->second;
     }
 
+    void handleReson(const char *msg, rtosc::RtData &d,
+                     WaveTableRequestHandler& handler,
+                     const PasteStateHandler& pasteStateHandler)
+    {
+        if(strstr(msg, "paste")) {
+            // paste is done by RT side
+            // even non-RT objects are always pasted inside the RT thread
+            d.forward();
+            return;
+        }
+        int part, kit;
+        bool res = idsFromMsg(d.message, &part, &kit);
+        assert(res);
+        if(pasteStateHandler.isPasteInProgressReso(part, kit))
+        {
+            printf("Dropped Resonance Message because paste is in progress:\n");
+            printf("  %s\n",msg);
+            return; // drop message for now - could be queued
+        }
+
+        string obj_rl(d.message, msg);
+        void *reso = get(obj_rl);
+        if(reso)
+        {
+            strcpy(d.loc, obj_rl.c_str());
+            d.obj = reso;
+            Resonance::ports.dispatch(msg, d);
+            if(// no match (will probably not occur)
+               d.matches == 0 ||
+               // message does not modify Resonance?
+               // (currently, messages without arguments don't modify it)
+               (   !rtosc_narguments(msg)
+                && !strstr(msg, "smooth")
+                && !strstr(msg, "zero")
+               ))
+            {
+                // nothing to re-compute
+            }
+            else {
+                // inform RT about new params
+                for(int voice = 0; voice < NUM_VOICES; ++voice)
+                {
+                    handler.chainWtParamRequest(part, kit, voice, false, d);
+                }
+            }
+        }
+        else {
+            // print warning, except in rtosc::walk_ports
+            if(!strstr(d.message, "/pointer"))
+            {
+                fprintf(stderr, "Warning: trying to access Resonance object "
+                                "\"%s\", which does not exist\n",
+                        obj_rl.c_str());
+            }
+            d.obj = nullptr; // tell walk_ports that there's nothing to recurse here...
+        }
+    }
     //! try to dispatch a message at the OscilGen ports, which are all non-RT
     void handleOscilADnote(const char *msg, bool isModOsc, rtosc::RtData &d,
                            WaveTableRequestHandler& handler,
                            const PasteStateHandler& pasteStateHandler) {
         if(strstr(msg, "paste")) {
+            // paste is done by RT side
             // even non-RT objects are always pasted inside the RT thread
             d.forward();
             return;
@@ -465,7 +552,7 @@ struct NonRtObjStore
         int part, kit, voice;
         bool res = idsFromMsg(d.message, &part, &kit, &voice);
         assert(res);
-        if(pasteStateHandler.isPasteInProgress(part, kit, voice, isModOsc))
+        if(pasteStateHandler.isPasteInProgressOscil(part, kit, voice, isModOsc))
         {
             printf("Dropped OscilGen Message because paste is in progress:\n");
             printf("  %s\n",msg);
@@ -1803,11 +1890,13 @@ static rtosc::Ports middwareSnoopPortsWithoutNonRtParams = {
         assert(res);
         impl.waveTableRequestHandler.chainWtParamRequest(part, kit, voice, false, d);
         d.forward();
-        rEnd},
+        rEnd}, // TODO: might handle in ADnotePar..., but this may not check the "parameter change time"
     {"part#" STRINGIFY(NUM_MIDI_PARTS)
-        "/kit#" STRINGIFY(NUM_KIT_ITEMS) "/adpars/GlobalPar"
-            "/Reson/", 0, nullptr,
+        "/kit#" STRINGIFY(NUM_KIT_ITEMS) "/adpars/GlobalPar/Reson/", 0, nullptr,
         rBegin;
+        impl.obj_store.handleReson(chomp(chomp(chomp(chomp(chomp(msg))))), d,
+                                   impl.waveTableRequestHandler,
+                                   impl.pasteStateHandler);
         const char* portname = strstr(msg, "/Reson/");
         assert(portname);
         portname += 7;
@@ -1824,7 +1913,6 @@ static rtosc::Ports middwareSnoopPortsWithoutNonRtParams = {
                 impl.waveTableRequestHandler.chainWtParamRequest(part, kit, voice, false, d);
             }
         }
-        d.forward();
         rEnd},
     /*
         other
@@ -1900,7 +1988,12 @@ static rtosc::Ports middwareSnoopPortsWithoutNonRtParams = {
              int part, kit, vc;
              bool isMod;
              if(idsFromMsg(url.c_str(), &part, &kit, &vc, &isMod)) {
-                 impl->pasteStateHandler.notifyPasteBegin(part, kit, vc, isMod);
+                 impl->pasteStateHandler.notifyPasteBeginOscil(part, kit, vc, isMod);
+             }
+             else if(url.find("Reson")!=string::npos)
+             {
+                 idsFromMsg(url.c_str(), &part, &kit);
+                 impl->pasteStateHandler.notifyPasteBeginReso(part, kit);
              }
          }
 
@@ -2320,7 +2413,14 @@ static rtosc::Ports middlewareReplyPorts = {
         bool isModOsc;
         std::size_t res = idsFromMsg(url.c_str(), &part, &kit, &vc, &isModOsc);
         if(res)
-            impl.pasteStateHandler.notifyPasteDone(part, kit, vc, isModOsc);
+        {
+            impl.pasteStateHandler.notifyPasteDoneOscil(part, kit, vc, isModOsc);
+        }
+        else if(url.find("Reson")!=string::npos)
+        {
+            idsFromMsg(url.c_str(), &part, &kit);
+            impl.pasteStateHandler.notifyPasteDoneReso(part, kit);
+        }
         printf("rPaste done.\n");
         // if URL ends on "/paste[^/]*", cut before the "/paste"
         string::size_type last_slash = url.rfind("/paste");

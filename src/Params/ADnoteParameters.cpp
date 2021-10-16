@@ -573,7 +573,19 @@ static const Ports voicePorts = {
 
 #define rChangeCb if (obj->time) { obj->last_update_timestamp = obj->time->time(); }
 static const Ports globalPorts = {
-    rRecurp(Reson, "Resonance"),
+    {"Reson/", rDoc("Primary Oscillator"),
+        &Resonance::ports,
+        rBOIL_BEGIN
+        if(obj->Reson == NULL) return;
+        data.obj = obj->Reson;
+        if(strstr(msg, "paste"))
+        {
+            SNIP
+            Resonance::ports.dispatch(msg, data);
+        }
+        else
+            data.forward();
+        rBOIL_END},
     rRecurp(FreqLfo, "Frequency LFO"),
     rRecurp(AmpLfo, "Amplitude LFO"),
     rRecurp(FilterLfo, "Filter LFO"),
