@@ -359,6 +359,7 @@ static const Ports voicePorts = {
         }},
 
     // Wavetable stuff
+    // If you do any changes here, please change doc/wavetable*, too
     {"wavetable-params-changed:Ti:Fi",
         rDoc("retrieve realtime params for wavetable computation"),
         nullptr,

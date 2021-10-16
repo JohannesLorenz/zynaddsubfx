@@ -471,7 +471,7 @@ struct NonRtObjStore
         objmap.clear();
     }
 
-    bool has(std::string loc)
+    bool has(std::string loc) const
     {
         return objmap.find(loc) != objmap.end();
     }
@@ -1879,7 +1879,7 @@ static rtosc::Ports nonRtParamPorts = {
 
 static rtosc::Ports middwareSnoopPortsWithoutNonRtParams = {
     /*
-        catch resonance changes
+        catch AD resonance changes
     */
     {"part#" STRINGIFY(NUM_MIDI_PARTS)
         "/kit#" STRINGIFY(NUM_KIT_ITEMS) "/adpars/VoicePar#"
