@@ -1155,7 +1155,7 @@ public:
                     Tensor1<WaveTable::float32>* unused_freqs; // non-constant
                     Tensor1<WaveTable::IntOrFloat>* unused_semantics;
                     wtMode = oscilGen->calculateWaveTableMode(params.isWtMod, params.isExtMod());
-                    std::tie(unused_freqs, unused_semantics) = oscilGen->calculateWaveTableScales(wtMode);
+                    std::tie(unused_freqs, unused_semantics) = oscilGen->calculateWaveTableScales(wtMode, params.presonance != 0);
                     // hack: pointing to these arrays is OK, because the swap
                     // in ADnoteParameters will not touch the array
                     // (and it will not get deleted until MW has delivered a
