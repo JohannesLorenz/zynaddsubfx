@@ -33,6 +33,8 @@
 namespace zyn {
 
 #define rObject OscilGen
+#undef rChangeCb
+#define rChangeCb ++obj->m_change_stamp
 const rtosc::Ports OscilGen::ports = {
     rSelf(OscilGen),
     rPasteAndReply,
@@ -121,6 +123,7 @@ const rtosc::Ports OscilGen::ports = {
                 o.pendingfreqs = data;
                 delete[] o.oscilFFTfreqs;
                 o.oscilFFTfreqs = data;
+                ++o.m_change_stamp;
             }
         }},
     //TODO update to rArray and test
@@ -144,6 +147,7 @@ const rtosc::Ports OscilGen::ports = {
                 o.pendingfreqs = data;
                 delete[] o.oscilFFTfreqs;
                 o.oscilFFTfreqs = data;
+                ++o.m_change_stamp;
             }
         }},
     {"base-spectrum:", rProp(non-realtime) rDoc("Returns spectrum of base waveshape"),
@@ -185,6 +189,7 @@ const rtosc::Ports OscilGen::ports = {
             char *edit   = strrchr(repath, '/')+1;
             *edit = 0;
             d.broadcast("/damage", "s", repath);
+            ++((OscilGen*)d.obj)->m_change_stamp;
         }},
     {"use-as-base:", rProp(non-realtime) rDoc("Translates current waveform into base"),
         NULL, [](const char *, rtosc::RtData &d) {
@@ -195,6 +200,7 @@ const rtosc::Ports OscilGen::ports = {
             char *edit   = strrchr(repath, '/')+1;
             *edit = 0;
             d.broadcast("/damage", "s", repath);
+            ++((OscilGen*)d.obj)->m_change_stamp;
         }},
     rParamZyn(Prand, rLinear(-64, 63), rShort("phase rnd"),
             rDefaultDepends(ADvsPAD), rPreset(true, 127), rPreset(false, 64),
@@ -344,6 +350,7 @@ OscilGen::OscilGen(const SYNTH_T &synth_, FFTwrapper *fft_, Resonance *res_)
     ADvsPAD  = false;
 
     defaults();
+    m_change_stamp.store(0);
 }
 
 OscilGen::~OscilGen()
@@ -487,8 +494,6 @@ public:
 wavetable_types::WtMode OscilGen::calculateWaveTableMode(bool forceWtMode, bool isExternal)
 {
     using WtMode = wavetable_types::WtMode;
-    if(!isExternal)
-        ++m_wavetable_generation_time;
     if(forceWtMode)
     {
         return WtMode::freqwave_smps;
@@ -579,7 +584,6 @@ void OscilGen::recalculateDefaultWaveTable(WaveTable * wt) const
     wt->setMode(WaveTable::WtMode::freq_smps);
     wt->setFreq(0, 55.f);
     wt->setSemantic(0, wavetable_types::IntOrFloat{.intVal=0});
-    wt->setGenerationTime(0);
 
     // no FFT/IFFT required, it's a simple sine
     // (the currently selected base function is still sine)
@@ -1408,6 +1412,8 @@ void OscilGen::paste(OscilGen &o)
     if(this->Pcurrentbasefunc)
         changebasefunction();
     this->prepare();
+
+    ++m_change_stamp;
 }
 #undef COPY
 
@@ -1575,7 +1581,10 @@ void OscilGen::getfromXML(XMLwrapper& xml)
         clearDC(basefuncFFTfreqs);
         normalize(basefuncFFTfreqs, synth.oscilsize);
         cachedbasevalid = false;
-    }}
+    }
+
+    ++m_change_stamp;
+}
 
 
 //Define basic functions

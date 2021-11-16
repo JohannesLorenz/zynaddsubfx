@@ -522,8 +522,8 @@ private:
     // in the next cycle
     bool m_require_update_request = false;
 
-    // unique counter of wavetable generation time
-    unsigned m_generation_time;
+    // OscilGen time stamp from when we previously were generated from OscilGen
+    unsigned change_stamp = 0;
 
 public:
     float get_freq(tensor_size_t freq_idx) const { return freqs[freq_idx]; }
@@ -579,7 +579,7 @@ public:
         std::swap(m_mode, unused.m_mode);
         std::swap(timestamp_current, unused.timestamp_current);
         std::swap(timestamp_requested, unused.timestamp_requested);
-        std::swap(m_generation_time, unused.m_generation_time);
+        std::swap(change_stamp, unused.change_stamp);
         assert(semantics.size() <= max_semantics_ever);
     }
 
@@ -602,9 +602,6 @@ public:
     void swapDataAt(tensor_size_t semanticIdx, tensor_size_t freqIdx, Tensor1<float32>& new_data) {
         data[semanticIdx][freqIdx].swapWith(new_data); }
 
-    void setGenerationTime(int time) { m_generation_time = time; }
-    int generationTime() const { return m_generation_time; }
-
     //! Insert generated data into this object
     //! If this is only adding new random seeds, then the rest of the data does
     //! not need to be purged
@@ -624,6 +621,9 @@ public:
     WaveTable& operator=(const WaveTable& other) = delete;
     WaveTable(WaveTable&& other) = delete;
     WaveTable& operator=(WaveTable&& other) = delete;
+
+    void setChangeStamp(unsigned to) { change_stamp = to; }
+    unsigned changeStamp() const { return change_stamp; }
 };
 
 }

@@ -1171,7 +1171,6 @@ public:
                     newWt->setMode(wtMode);
                     newWt->swapFreqsInitially(*unused_freqs);
                     newWt->swapSemanticsInitially(*unused_semantics);
-                    newWt->setGenerationTime(oscilGen->wavetableGenerationTime());
 
                     delete unused_freqs;
                     delete unused_semantics;

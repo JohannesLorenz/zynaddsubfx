@@ -14,6 +14,8 @@
 #ifndef OSCIL_GEN_H
 #define OSCIL_GEN_H
 
+#include <atomic>
+
 #include "../globals.h"
 #include <rtosc/ports.h>
 #include "../Params/Presets.h"
@@ -25,6 +27,8 @@ class OscilGen:public Presets
 {
     public:
         OscilGen(const SYNTH_T &synth, FFTwrapper *fft_, Resonance *res_);
+        OscilGen(const OscilGen& other) = delete;
+        OscilGen& operator=(OscilGen& other) = delete;
         ~OscilGen();
 
         /**computes the full spectrum of oscil from harmonics,phases and basefunc*/
@@ -198,11 +202,11 @@ class OscilGen:public Presets
 
         unsigned int randseed;
 
-        int m_wavetable_generation_time = 0;
+        std::atomic<unsigned> m_change_stamp;
     public:
         const SYNTH_T &synth;
 
-        int wavetableGenerationTime() const { return m_wavetable_generation_time; }
+        unsigned change_stamp() const { return m_change_stamp; }
 };
 
 typedef float filter_func_t(unsigned int, float, float);

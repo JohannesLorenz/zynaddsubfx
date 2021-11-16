@@ -81,10 +81,7 @@ static const Ports voicePorts = {
             auto cb = rParamICb(Pextoscil);
             cb(msg, data);
             if(change)
-            {
                 obj->requestWavetable(data, false);
-                obj->table->setGenerationTime(-1);
-            }
         rBOIL_END},
     {"PextFMoscil::i",     rProp(parameter) rDefault(-1) rShort("ext.")
                            rMap(min, -1) rMap(max, 16)
@@ -95,10 +92,7 @@ static const Ports voicePorts = {
             auto cb = rParamICb(PextFMoscil);
             cb(msg, data);
             if(change)
-            {
                 obj->requestWavetable(data, true);
-                obj->table->setGenerationTime(-1);
-            }
         rBOIL_END},
     rParamI(Pextoscil,       rDefault(-1),     rShort("ext."),
             rMap(min, -1), rMap(max, 16), "External Oscillator Selection"),
@@ -1685,27 +1679,22 @@ void ADnoteVoiceParam::getfromXML(XMLwrapper& xml, unsigned nvoice)
 
 void ADnoteParameters::requestWavetables(rtosc::ThreadLink* bToU, int part, int kit)
 {
-    // update any table which uses an external oscil
-    // (because updating external voices only generates tables for themselves)
+    // OscilGen::paste() does not re-request wavetables
+    // so we need to look them up
     for (std::size_t v = 0; v < NUM_VOICES; ++v)
     {
-        int ext = VoicePar[v].Pextoscil;
-        if(ext != -1)
+        int intOrExt = (VoicePar[v].Pextoscil == -1) ? v : VoicePar[v].Pextoscil;
+        if(VoicePar[intOrExt].OscilGn->change_stamp() > VoicePar[v].table->changeStamp())
         {
-            if(VoicePar[v].table->generationTime() < VoicePar[ext].table->generationTime())
-            {
-                VoicePar[v].requestWavetable(bToU, part, kit, v, false);
-                VoicePar[v].table->setGenerationTime(VoicePar[ext].table->generationTime()); // forbid re-sending requests
-            }
+            VoicePar[v].requestWavetable(bToU, part, kit, v, false);
+            VoicePar[v].table->setChangeStamp(VoicePar[intOrExt].OscilGn->change_stamp());
         }
-        ext = VoicePar[v].PextFMoscil;
-        if(ext != -1)
+
+        intOrExt = (VoicePar[v].PextFMoscil == -1) ? v : VoicePar[v].PextFMoscil;
+        if(VoicePar[intOrExt].FmGn->change_stamp() > VoicePar[v].tableMod->changeStamp())
         {
-            if(VoicePar[v].tableMod->generationTime() < VoicePar[ext].tableMod->generationTime())
-            {
-                VoicePar[v].requestWavetable(bToU, part, kit, v, true);
-                VoicePar[v].tableMod->setGenerationTime(VoicePar[ext].tableMod->generationTime()); // forbid re-sending requests
-            }
+            VoicePar[v].requestWavetable(bToU, part, kit, v, true);
+            VoicePar[v].tableMod->setChangeStamp(VoicePar[intOrExt].FmGn->change_stamp());
         }
     }
 
@@ -1749,7 +1738,6 @@ void ADnoteVoiceParam::requestWavetable(rtosc::RtData& data, bool isModOsc) cons
         // wavetable parameters
         isModOsc ? (int)PextFMoscil : (int)Pextoscil,
         isModOsc ? 0 : (int)Presonance);
-       // obj->table->setGenerationTime(-1);
 }
 
 
