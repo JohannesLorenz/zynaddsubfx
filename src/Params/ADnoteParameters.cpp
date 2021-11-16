@@ -1813,6 +1813,7 @@ void ADnoteVoiceParam::requestWavetables(rtosc::ThreadLink* bToU, int part, int 
             } // for loop over freqs
         } // !wt->outdated()
 
+        // Handle XML load/paste
         if(wt->update_request_required())
         {
 #ifdef DBG_WAVETABLES
@@ -1820,11 +1821,6 @@ void ADnoteVoiceParam::requestWavetables(rtosc::ThreadLink* bToU, int part, int 
                    wt);
 #endif
             requestWavetable(bToU, part, kit, voice, isModOsc);
-            // don't mark the whole ringbuffer (-1) as "write requested"
-            // because the current Tensor3 will be swapped before it will
-            // be refilled
-            //wt->dump_rb();
-
             wt->update_request_sent();
         }
 
