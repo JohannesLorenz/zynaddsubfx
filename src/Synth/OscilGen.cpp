@@ -523,25 +523,27 @@ std::pair<Tensor1<wavetable_types::float32>*, Tensor1<wavetable_types::IntOrFloa
     }
 
     // semantics
-    if(wtMode == WtMode::freqseed_smps)
+    switch(wtMode)
     {
-        for(tensor_size_t i = 0; i < semantics->size(); ++i)
+        case WtMode::freqseed_smps:
+            for(tensor_size_t i = 0; i < semantics->size(); ++i)
+            {
+                (*semantics)[i].intVal = prng();
+            }
+            break;
+        case WtMode::freq_smps:
+            assert(semantics->size() == 1);
+            (*semantics)[0].intVal = 0;
+            break;
+        case WtMode::freqwave_smps:
         {
-            (*semantics)[i].intVal = prng();
-        }
-    }
-    else if(wtMode == WtMode::freq_smps)
-    {
-        assert(semantics->size() == 1);
-        (*semantics)[0].intVal = 0;
-    }
-    else // TODO: else-if
-    {
-        // TODO: compare with old WT algorithm
-        float step = 128.f / semantics->size();
-        for(tensor_size_t i = 0; i < semantics->size(); ++i)
-        {
-            (*semantics)[i].floatVal = step * i;
+            // TODO WT7: compare with old WT algorithm (fine tuning for 128.f)
+            float step = 128.f / semantics->size();
+            for(tensor_size_t i = 0; i < semantics->size(); ++i)
+            {
+                (*semantics)[i].floatVal = step * i;
+            }
+            break;
         }
     }
 
@@ -613,7 +615,7 @@ void OscilGen::getbasefunction(float *smps, float differingBaseFuncPar)
     if(differingBaseFuncPar < 0.f)
         differingBaseFuncPar = Pbasefuncpar;
     float par = (differingBaseFuncPar + 0.5f) / 128.0f;
-    if(differingBaseFuncPar == 64)
+    if(differingBaseFuncPar < 0.f && Pbasefuncpar == 64)
         par = 0.5f;
 
     float p1 = Pbasefuncmodulationpar1 / 127.0f,
@@ -1166,6 +1168,9 @@ bool OscilGen::mayUseRandom() const
  */
 short int OscilGen::get(float *smps, float freqHz, int resonance, float differingBaseFuncPar)
 {
+    // note: differingBaseFuncPar can range from 0 to 128, too, but it has steps
+    //       in between to allow better fine tuning
+
     if(needPrepare(differingBaseFuncPar))
         prepare(differingBaseFuncPar);
 

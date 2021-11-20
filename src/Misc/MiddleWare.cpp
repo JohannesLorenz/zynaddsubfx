@@ -440,8 +440,8 @@ struct NonRtObjStore
                 // inform RT about new params
                 for(int voice = 0; voice < NUM_VOICES; ++voice)
                 {
-                    // TODO: can be detected in ADnoteParameters::requestWavetables,
-                    //       similar to OscilGen change stamps?
+                    // TODO WT1: can be detected in ADnoteParameters::requestWavetables(),
+                    //           similar to OscilGen change stamps?
                     handler.chainWtParamRequest(part, kit, voice, false, d);
                 }
             }
@@ -1791,7 +1791,7 @@ static rtosc::Ports middwareSnoopPortsWithoutNonRtParams = {
         assert(res);
         impl.waveTableRequestHandler.chainWtParamRequest(part, kit, voice, false, d);
         d.forward();
-        rEnd}, // TODO: might handle in ADnotePar..., but this may not check the "parameter change time"
+        rEnd}, // TODO WT2: might handle re-request WTs in ADnotePar...
     {"part#" STRINGIFY(NUM_MIDI_PARTS)
         "/kit#" STRINGIFY(NUM_KIT_ITEMS) "/adpars/GlobalPar/Reson/", 0, nullptr,
         rBegin;
@@ -2295,8 +2295,8 @@ static rtosc::Ports middlewareReplyPorts = {
         rEnd},
     {"rt_paste_done:s", 0, 0,
         rBegin;
-        // TODO: check that this also works with OscilGen and Resonance
-        //       If not, this would not call "/damage" -> memory leak
+        // TODO WT3: check that this also works with OscilGen and Resonance
+        //           If not, this would not call "/damage" -> memory leak
         printf("rPaste done.\n");
         // if URL ends on "/paste[^/]*", cut before the "/paste"
         std::string url = rtosc_argument(msg, 0).s;

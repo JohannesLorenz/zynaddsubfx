@@ -96,12 +96,5 @@ WaveTable::WaveTable(tensor_size_t nsemantics, tensor_size_t nfreqs) :
     setMode(WtMode::freq_smps);
 }
 
-WaveTableRef::~WaveTableRef() {
-    // ref may be nullptr if the object has donated its content in a move CTOR
-    if(ref && --ref->refCount == 0) {
-        delete ref->wt; delete ref;
-    }
-}
-
 }
 

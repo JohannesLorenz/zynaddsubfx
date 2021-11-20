@@ -505,7 +505,7 @@ void ADnote::setupVoiceMod(int nvoice, bool first_run)
     else
     {
         // re-precompute stuff depending on WaveTable::mode()
-        fillOscilSmpFromWt(nvoice); // TODO: only once
+        fillOscilSmpFromWt(nvoice);
         // correct FM mode that will be played
         voice.FMEnabled = (wt_mode == wavetable_types::WtMode::freqwave_smps)
                         ? FMTYPE::WAVE_MOD
@@ -544,7 +544,8 @@ void ADnote::setupVoiceMod(int nvoice, bool first_run)
                 assert(pars.VoicePar[nvoice].tableMod); // did you allocate ADnoteParameters and not assign its "table" member?
                 const float* bufferInTable = pars.VoicePar[nvoice].tableMod->get(tmp).data();
                 std::copy(bufferInTable, bufferInTable + synth.oscilsize, voice.FMSmp);
-                // probably a bug that OscilGn is used: (TODO)
+                // probably a bug that OscilGn is used here:
+                // (TODO WT4: File bug report about this against master)
                 voice.oscposhiFM[k] = pars.VoicePar[nvoice].OscilGn->getFinalOutpos() % synth.oscilsize;
             }
             else // debug code for testing only
@@ -1024,7 +1025,7 @@ void ADnote::initparameters(WatchManager *wm, const char *prefix)
                     assert(pars.VoicePar[nvoice].tableMod); // did you allocate ADnoteParameters and not assign its "table" member?
                     const float* bufferInTable = pars.VoicePar[nvoice].tableMod->get(tmp).data();
                     std::copy(bufferInTable, bufferInTable + synth.oscilsize, vce.FMSmp);
-                    vce.oscposhiFM[k] = pars.VoicePar[nvoice].OscilGn->getFinalOutpos() % synth.oscilsize; // TODO: bug: OscilGn
+                    vce.oscposhiFM[k] = pars.VoicePar[nvoice].OscilGn->getFinalOutpos() % synth.oscilsize; // TODO WT5: bug, see WT4
                 }
                 else // debug code, testing only
                 {
@@ -1751,7 +1752,7 @@ inline void ADnote::ComputeVoiceOscillatorWaveTableModulation(int nvoice)
     int i;
 
     // the following code is just copied from PM/FM
-    // TODO: Move into the function above: ComputeVoiceOscillatorFMOrWaveTable
+    // TODO WT6: Move into the function above: ComputeVoiceOscillatorFMOrWaveTable
     if(NoteVoicePar[nvoice].FMVoice >= 0)
         //if I use VoiceOut[] as modulator
         for(int k = 0; k < vce.unison_size; ++k) {

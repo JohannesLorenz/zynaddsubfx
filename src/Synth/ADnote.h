@@ -202,7 +202,11 @@ class ADnote:public SynthNote
                 bool isWaveTable;
             };
             OscilSmpT OscilSmp;
-            float basefuncpar; //! basefunc par of what is stored in out OscilSmp [0,1.0]
+            float basefuncpar; //!< WT oscillation center
+            //! WT only: Divisor, so [-1,1] is scaled down. E.g. if the wave
+            //!          oscillation center is 0.8, then +1 has to be mapped to
+            //!          +0.2, and -1 to -0.2, i.e. FMSmpMax is 5
+            float FMSmpMax;
 
             /* preserved for phase mod PWM emulation. */
             int phase_offset;
@@ -263,7 +267,6 @@ class ADnote:public SynthNote
 
             /* Wave of the Voice */
             float *FMSmp;
-            float FMSmpMax; // TODO! document this
 
             smooth_float FMVolume;
             float FMDetune;  //in cents
