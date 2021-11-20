@@ -94,10 +94,6 @@ static const Ports voicePorts = {
             if(change)
                 obj->requestWavetable(data, true);
         rBOIL_END},
-    rParamI(Pextoscil,       rDefault(-1),     rShort("ext."),
-            rMap(min, -1), rMap(max, 16), "External Oscillator Selection"),
-    rParamI(PextFMoscil,     rDefault(-1),     rShort("ext."),
-            rMap(min, -1), rMap(max, 16), "External FM Oscillator Selection"),
     rParamZyn(Poscilphase,   rShort("phase"),  rDefault(64),
         "Oscillator Phase"),
     rParamZyn(PFMoscilphase, rShort("phase"),  rDefault(64),
