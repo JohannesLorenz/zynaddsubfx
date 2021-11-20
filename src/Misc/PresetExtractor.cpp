@@ -195,6 +195,22 @@ std::string doCopy(MiddleWare &mw, string url, string name, void* presetsObj)
     return "";
 }
 
+template<>
+std::string doCopy<OscilGen>(MiddleWare &mw, string , string name, void* presetsObj)
+{
+    OscilGen* o = static_cast<OscilGen*>(presetsObj);
+    o->copy(mw.getPresetsStore(), name.empty()? NULL:name.c_str());
+    return "";
+}
+
+template<>
+std::string doCopy<Resonance>(MiddleWare &mw, string , string name, void* presetsObj)
+{
+    Resonance* r = static_cast<Resonance*>(presetsObj);
+    r->copy(mw.getPresetsStore(), name.empty()? NULL:name.c_str());
+    return "";
+}
+
 template<class T, typename... Ts>
 void doPaste(MiddleWare &mw, string url, string type, XMLwrapper &xml, Ts&&... args)
 {

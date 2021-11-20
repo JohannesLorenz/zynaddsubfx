@@ -573,13 +573,7 @@ static const Ports globalPorts = {
         rBOIL_BEGIN
         if(obj->Reson == NULL) return;
         data.obj = obj->Reson;
-        if(strstr(msg, "paste"))
-        {
-            SNIP
-            Resonance::ports.dispatch(msg, data);
-        }
-        else
-            data.forward();
+        data.forward();
         rBOIL_END},
     rRecurp(FreqLfo, "Frequency LFO"),
     rRecurp(AmpLfo, "Amplitude LFO"),
