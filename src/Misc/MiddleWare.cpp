@@ -1042,6 +1042,7 @@ public:
                 // the generating oscilGen (can be internal or external)
                 OscilGen* oscilGen = static_cast<OscilGen*>(
                      obj_store.get(oscilGenStr));
+                assert(oscilGen);
 
                 wavetable_types::WtMode wtMode;
                 // hack:
@@ -1075,6 +1076,7 @@ public:
                     newWt->setMode(wtMode);
                     newWt->swapFreqsInitially(*unused_freqs);
                     newWt->swapSemanticsInitially(*unused_semantics);
+                    newWt->setChangeStamp(oscilGen->change_stamp());
 
                     delete unused_freqs;
                     delete unused_semantics;
@@ -1094,7 +1096,6 @@ public:
                 printf("WT: MW must generate: %s (mod-osc: %s), resonance %d\n",
                     params.voicePath.c_str(), params.isModOsc ? "true":"false", params.presonance);
 #endif
-                assert(oscilGen);
                 assert(!params.isModOsc || params.presonance == 0);
 
                 // calculate all freqs for all pending semantics
