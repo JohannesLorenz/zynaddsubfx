@@ -262,6 +262,8 @@ void preparePadSynth(string path, PADnoteParameters *p, rtosc::RtData &d)
 
 /**
  * Class responsible for sending chained requests of "/wavetable-params-changed"
+ * TODO WT1: This could be removed, because changes are detected in a loop in
+ *           ADnoteParameters::requestWaveTables (every 0.2s).
  */
 class WaveTableRequestHandler
 {
@@ -490,6 +492,8 @@ struct NonRtObjStore
             }
             else {
                 // inform RT about new params
+                // TODO WT1: can be detected in ADnoteParameters::requestWavetables(),
+                //           similar to OscilGen change stamps?
                 handler.chainWtParamRequest(part, kit, voice, isModOsc, d);
             }
         }
@@ -1022,6 +1026,7 @@ public:
         }
 
         // calculate all pending requests at once for now (can be changed)
+        // WT TODO 8: Use separate thread?
         while(!waveTablesToGenerate.empty())
         {
             waveTablesToGenerateStruct& params = waveTablesToGenerate.front();

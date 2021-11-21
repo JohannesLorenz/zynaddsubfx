@@ -544,9 +544,7 @@ void ADnote::setupVoiceMod(int nvoice, bool first_run)
                 assert(pars.VoicePar[nvoice].tableMod); // did you allocate ADnoteParameters and not assign its "table" member?
                 const float* bufferInTable = pars.VoicePar[nvoice].tableMod->get(tmp).data();
                 std::copy(bufferInTable, bufferInTable + synth.oscilsize, voice.FMSmp);
-                // probably a bug that OscilGn is used here:
-                // (TODO WT4: File bug report about this against master)
-                voice.oscposhiFM[k] = pars.VoicePar[nvoice].OscilGn->getFinalOutpos() % synth.oscilsize;
+                voice.oscposhiFM[k] = pars.VoicePar[nvoice].FmGn->getFinalOutpos() % synth.oscilsize;
             }
             else // debug code for testing only
             {
@@ -1025,7 +1023,7 @@ void ADnote::initparameters(WatchManager *wm, const char *prefix)
                     assert(pars.VoicePar[nvoice].tableMod); // did you allocate ADnoteParameters and not assign its "table" member?
                     const float* bufferInTable = pars.VoicePar[nvoice].tableMod->get(tmp).data();
                     std::copy(bufferInTable, bufferInTable + synth.oscilsize, vce.FMSmp);
-                    vce.oscposhiFM[k] = pars.VoicePar[nvoice].OscilGn->getFinalOutpos() % synth.oscilsize; // TODO WT5: bug, see WT4
+                    vce.oscposhiFM[k] = pars.VoicePar[nvoice].FmGn->getFinalOutpos() % synth.oscilsize;
                 }
                 else // debug code, testing only
                 {
