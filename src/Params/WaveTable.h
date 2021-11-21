@@ -25,6 +25,7 @@
 
 // define this to enable debug output
 //#define DBG_WAVETABLES
+#define DBG_WAVETABLES_BASIC
 
 namespace zyn {
 

@@ -1098,11 +1098,26 @@ public:
 #endif
                 assert(!params.isModOsc || params.presonance == 0);
 
+                const char* mode_str = "unknown";
+                switch(wtMode)
+                {
+                    case wavetable_types::WtMode::freqwave_smps:
+                        mode_str = "wavetable";
+                        break;
+                    case wavetable_types::WtMode::freqseed_smps:
+                        mode_str = "freqseed";
+                        break;
+                    case wavetable_types::WtMode::freq_smps:
+                        mode_str = "freq";
+                        break;
+                }
+
                 // calculate all freqs for all pending semantics
                 if(params.wave_requests.size())
                 {
-#ifdef DBG_WAVETABLES
-                    printf("WT: MW generating %d new tensors of 1 wave each...\n", (int)params.wave_requests.size());
+#ifdef DBG_WAVETABLES_BASIC
+                    printf("WT: MW generating %d new tensors of 1 wave each (mode %s)...\n",
+                           (int)params.wave_requests.size(), mode_str);
 #endif
                     for(const waveTablesToGenerateStruct::wave_request& wave_req : params.wave_requests)
                     {
@@ -1117,8 +1132,9 @@ public:
                 }
                 else
                 {
-#ifdef DBG_WAVETABLES
-                    printf("WT: MW generating %d new tensors of %d waves each...\n", (int)size_semantics, (int)size_freqs);
+#ifdef DBG_WAVETABLES_BASIC
+                    printf("WT: MW generating %d new tensors of %d waves each (mode %s)...\n",
+                           (int)size_semantics, (int)size_freqs, mode_str);
 #endif
                     assert(freqs_array);
                     assert(sem_array);
