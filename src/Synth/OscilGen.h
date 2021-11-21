@@ -69,7 +69,7 @@ class OscilGen:public Presets
         wavetable_types::WtMode calculateWaveTableMode(bool forceWtMode, bool isExternal);
         //! calculate freqs + semantics
         std::pair<Tensor1<wavetable_types::float32>*, Tensor1<wavetable_types::IntOrFloat>*>
-            calculateWaveTableScales(wavetable_types::WtMode wtMode, bool with_resonance) const;
+			calculateWaveTableScales(wavetable_types::WtMode wtMode, bool voice_uses_reso) const;
 
         //Parameters
 

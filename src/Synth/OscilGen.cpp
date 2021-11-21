@@ -505,14 +505,14 @@ wavetable_types::WtMode OscilGen::calculateWaveTableMode(bool forceWtMode, bool 
 }
 
 std::pair<Tensor1<wavetable_types::float32>*, Tensor1<wavetable_types::IntOrFloat>*> OscilGen::calculateWaveTableScales(
-    wavetable_types::WtMode wtMode, bool with_resonance) const
+    wavetable_types::WtMode wtMode, bool voice_uses_reso) const
 {
     Tensor1<wavetable_types::float32>* freqs;
     Tensor1<wavetable_types::IntOrFloat>* semantics;
     using WtMode = wavetable_types::WtMode;
 
     {
-        std::size_t freq_sz = with_resonance ? 128 : WaveTable::num_freqs;
+        std::size_t freq_sz = (voice_uses_reso && res && res->Penabled) ? 128 : WaveTable::num_freqs;
         std::size_t sem_sz = wtMode == WtMode::freqwave_smps
                              ? WaveTable::num_semantics_wtmod
                              : (wtMode == WtMode::freqseed_smps)
