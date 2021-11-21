@@ -214,14 +214,13 @@ static const Ports voicePorts = {
                 rLIMIT(var, atoi)
                 if((int)obj->PFMEnabled != var)
                 {
+                    rCAPPLY(obj->PFMEnabled, i, obj->PFMEnabled = static_cast<std::remove_reference<decltype(obj->PFMEnabled)>::type>(var))
+                    data.broadcast(loc, fromStr ? "i" : rtosc_argument_string(msg),
+                                   obj->PFMEnabled);
                     if(var == (int)FMTYPE::WAVE_MOD || obj->PFMEnabled == FMTYPE::WAVE_MOD)
                     {
                         obj->requestWavetable(data, false);
                     }
-
-                    rCAPPLY(obj->PFMEnabled, i, obj->PFMEnabled = static_cast<std::remove_reference<decltype(obj->PFMEnabled)>::type>(var))
-                    data.broadcast(loc, fromStr ? "i" : rtosc_argument_string(msg),
-                                   obj->PFMEnabled);
                     rChangeCb;
                 }
             }
