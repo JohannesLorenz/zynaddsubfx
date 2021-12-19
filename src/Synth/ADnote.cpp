@@ -193,7 +193,6 @@ void ADnote::setupVoice(int nvoice)
 
     const float offset_val = (param.POffsetHz - 64)/64.0f;
     voice.OffsetHz   = 15.0f*(offset_val * sqrtf(fabsf(offset_val)));
-
     voice.unison_stereo_spread =
         pars.VoicePar[nvoice].Unison_stereo_spread / 127.0f;
 
@@ -475,7 +474,14 @@ void ADnote::setupVoiceMod(int nvoice, bool first_run)
         voice.FMEnabled = FMTYPE::NONE;
     else {
         // switch WT->non-WT or non-WT-WT?
-        if((param.PFMEnabled == FMTYPE::WAVE_MOD) !=
+        if(first_run)
+        {
+            // make FMEnabledBeforeWtSwitch and voice.FMEnabled equal
+            // (they will be after assigning voice.FMenabled),
+            // so that no wavetable mode change will be triggered
+            voice.FMEnabledBeforeWtSwitch = param.PFMEnabled;
+        }
+        else if((param.PFMEnabled == FMTYPE::WAVE_MOD) !=
            (voice.FMEnabled == FMTYPE::WAVE_MOD))
         {
             // store previous FMEnabled
