@@ -31,6 +31,7 @@
 #include "../UI/Fl_Osc_Interface.h"
 
 #include <map>
+#include <memory>
 #include <queue>
 
 #include "Util.h"
@@ -1013,168 +1014,252 @@ public:
     bool recording_undo = true;
     void bToUhandle(const char *rtmsg);
 
-    void calculateWavetables()
+    /*
+     * begin of wavetable code
+     */
+    std::vector<std::unique_ptr<std::thread>> wtGenThreads;
+    struct wtResult
     {
-        if(wt_queue_age < wt_queue_max_age)
-        {
-            ++wt_queue_age;
-            return;
-        }
-        else
-        {
-            wt_queue_age = 0;
-        }
+        void* tensor;
+        std::size_t freq_idx;
+        std::size_t sem_idx;
+    };
+    std::vector<wtResult> calculatedTables;
 
-        // calculate all pending requests at once for now (can be changed)
-        // WT TODO 8: Use separate thread?
-        while(!waveTablesToGenerate.empty())
+    //! Return the generating oscilGen (can be internal or external)
+    OscilGen* getOscilGen(const waveTablesToGenerateStruct& params)
+    {
+        std::string oscilGenStr = params.voicePath;
+        if(oscilGenStr.back() == '/')
+            oscilGenStr.resize(oscilGenStr.size()-1);
+        if(params.isExtMod())
         {
-            waveTablesToGenerateStruct& params = waveTablesToGenerate.front();
-            if(waveTableRequestHandler.isParamChangeUpToDate(
-                params.part, params.kit, params.voice, params.isModOsc,
-                params.param_change_time))
+            while(isdigit(oscilGenStr.back()))
+                oscilGenStr.resize(oscilGenStr.size()-1);
+            oscilGenStr += std::to_string(params.extMod);
+        }
+        oscilGenStr += (params.isModOsc ? "/FMSmp/" : "/OscilSmp/");
+        // the generating oscilGen (can be internal or external)
+        OscilGen* oscilGen = static_cast<OscilGen*>(
+             obj_store.get(oscilGenStr));
+        assert(oscilGen);
+        return oscilGen;
+    }
+
+    void calculateWavetables(const waveTablesToGenerateStruct& params, std::size_t job,
+                             OscilGen* oscilGen,
+                             wavetable_types::WtMode wtMode,
+                             std::size_t size_semantics,
+                             const WaveTable::float32* freqs_array,
+                             const WaveTable::IntOrFloat* sem_array)
+    {
+        {
+            const char* mode_str = "unknown";
+            switch(wtMode)
             {
-                std::string oscilGenStr = params.voicePath;
-                if(oscilGenStr.back() == '/')
-                    oscilGenStr.resize(oscilGenStr.size()-1);
-                if(params.isExtMod())
-                {
-                    while(isdigit(oscilGenStr.back()))
-                        oscilGenStr.resize(oscilGenStr.size()-1);
-                    oscilGenStr += std::to_string(params.extMod);
-                }
-                oscilGenStr += (params.isModOsc ? "/FMSmp/" : "/OscilSmp/");
-                // the generating oscilGen (can be internal or external)
-                OscilGen* oscilGen = static_cast<OscilGen*>(
-                     obj_store.get(oscilGenStr));
-                assert(oscilGen);
-
-                wavetable_types::WtMode wtMode;
-                // hack:
-                const WaveTable::float32* freqs_array = nullptr;
-                const WaveTable::IntOrFloat* sem_array = nullptr;
-                std::size_t size_freqs, size_semantics;
-                if(params.wave_requests.size())
-                {
-                    wtMode = wavetable_types::WtMode::freqseed_smps;
-                }
-                else
-                // if no wave requests, this means generate a completely new
-                // wavetable
-                {
-                    Tensor1<WaveTable::float32>* unused_freqs; // non-constant
-                    Tensor1<WaveTable::IntOrFloat>* unused_semantics;
-                    wtMode = oscilGen->calculateWaveTableMode(params.isWtMod, params.isExtMod());
-                    std::tie(unused_freqs, unused_semantics) = oscilGen->calculateWaveTableScales(wtMode, params.presonance != 0);
-                    // hack: pointing to these arrays is OK, because the swap
-                    // in ADnoteParameters will not touch the array
-                    // (and it will not get deleted until MW has delivered a
-                    // further Tensor)
-                    freqs_array = unused_freqs->data();
-                    sem_array = unused_semantics->data();
-                    size_freqs = unused_freqs->size();
-                    size_semantics = unused_semantics->size();
-
-                    // possible optimization: no allocations when sizes don't change
-                    // but this might complicate the code
-                    WaveTable* newWt = new WaveTable(unused_semantics->size(), unused_freqs->size());
-                    newWt->setMode(wtMode);
-                    newWt->swapFreqsInitially(*unused_freqs);
-                    newWt->swapSemanticsInitially(*unused_semantics);
-                    newWt->setChangeStamp(oscilGen->change_stamp());
-
-                    delete unused_freqs;
-                    delete unused_semantics;
-                    const WaveTable* wt = newWt; // from now, kept const in this function
-
-                    // send Tensor3, it does not contain any buffers yet
-                    // no snoop ports, send this directly to RT
-                    uToB->write((params.voicePath + "set-wavetable").c_str(),
-                                params.isModOsc ? "Tb" : "Fb", sizeof(WaveTable*), (uint8_t*)&wt);
-
-#ifdef DBG_WAVETABLES
-                    printf("WT: MW generated new scales, sizes: %d %d\n", (int)wt->size_freqs(), (int)wt->size_semantics());
-#endif
-                }
-
-#ifdef DBG_WAVETABLES
-                printf("WT: MW must generate: %s (mod-osc: %s), resonance %d\n",
-                    params.voicePath.c_str(), params.isModOsc ? "true":"false", params.presonance);
-#endif
-                assert(!params.isModOsc || params.presonance == 0);
-
-                const char* mode_str = "unknown";
-                switch(wtMode)
-                {
-                    case wavetable_types::WtMode::freqwave_smps:
-                        mode_str = "wavetable";
-                        break;
-                    case wavetable_types::WtMode::freqseed_smps:
-                        mode_str = "freqseed";
-                        break;
-                    case wavetable_types::WtMode::freq_smps:
-                        mode_str = "freq";
-                        break;
-                }
-
-                // calculate all freqs for all pending semantics
-                if(params.wave_requests.size())
-                {
-#ifdef DBG_WAVETABLES_BASIC
-                    printf("WT: MW generating %d new tensors of 1 wave each (mode %s)...\n",
-                           (int)params.wave_requests.size(), mode_str);
-#endif
-                    for(const waveTablesToGenerateStruct::wave_request& wave_req : params.wave_requests)
-                    {
-                        Tensor1<WaveTable::float32>* newTensor = new Tensor1<WaveTable::float32>(synth.oscilsize);
-                        WaveTable::float32* data = oscilGen->calculateWaveTableData(
-                            wave_req.freq, wave_req.sem, wtMode, params.presonance);
-                        newTensor->take_data_and_own_it(data);
-                        // this actually just sets "one" wave
-                        uToB->write((params.voicePath + "set-waves").c_str(), params.isModOsc ? "Tiiib" : "Fiiib",
-                                    params.param_change_time, wave_req.freq_idx, wave_req.sem_idx, sizeof(Tensor1<WaveTable::float32>*), (uint8_t*)&newTensor);
-                    }
-                }
-                else
-                {
-#ifdef DBG_WAVETABLES_BASIC
-                    printf("WT: MW generating %d new tensors of %d waves each (mode %s)...\n",
-                           (int)size_semantics, (int)size_freqs, mode_str);
-#endif
-                    assert(freqs_array);
-                    assert(sem_array);
-                    for(tensor_size_t i = 0; i < size_freqs; ++i)
-                    {
-                        const Shape2 tensorShape{size_semantics,
-                                                 (tensor_size_t)synth.oscilsize};
-                        Tensor2<WaveTable::float32>* newTensor =
-                            new Tensor2<WaveTable::float32>(tensorShape);
-
-                        tensor_size_t f = i % size_freqs;
-                        for(tensor_size_t s = 0; s < size_semantics; ++s)
-                        {
-                            WaveTable::float32* data = oscilGen->calculateWaveTableData(
-                                freqs_array[f], sem_array[s], wtMode, params.presonance);
-                            (*newTensor)[s].take_data_and_own_it(data);
-                        }
-
-#ifdef DBG_WAVETABLES
-                        printf("WT: MW sending tensor at freq %d\n", (int)f);
-#endif
-                        // no snoop ports, send this directly to RT
-                        uToB->write((params.voicePath + "set-waves").c_str(), params.isModOsc ? "Tiib" : "Fiib", params.param_change_time, f, sizeof(Tensor2<WaveTable::float32>*), (uint8_t*)&newTensor);
-                    }
-                }
-            }
-            else {
-#ifdef DBG_WAVETABLES
-                printf("WT: MW dropping outdated WT request %d\n",params.param_change_time);
-#endif
+                case wavetable_types::WtMode::freqwave_smps:
+                    mode_str = "wavetable";
+                    break;
+                case wavetable_types::WtMode::freqseed_smps:
+                    mode_str = "freqseed";
+                    break;
+                case wavetable_types::WtMode::freq_smps:
+                    mode_str = "freq";
+                    break;
             }
 
-            waveTablesToGenerate.pop();
+            // calculate all freqs for all pending semantics
+            if(params.wave_requests.size())
+            {
+#ifdef DBG_WAVETABLES_BASIC
+                printf("WT: MW generating new tensor of 1 wave each (mode %s)...\n",
+                       mode_str);
+#endif
+                const waveTablesToGenerateStruct::wave_request& wave_req = params.wave_requests[job];
+                Tensor1<WaveTable::float32>* newTensor = new Tensor1<WaveTable::float32>(synth.oscilsize);
+                WaveTable::float32* data = oscilGen->calculateWaveTableData(
+                    wave_req.freq, wave_req.sem, wtMode, params.presonance);
+                newTensor->take_data_and_own_it(data);
+
+                calculatedTables[job].tensor = newTensor;
+                calculatedTables[job].freq_idx = wave_req.freq_idx;
+                calculatedTables[job].sem_idx = wave_req.sem_idx;
+            }
+            else // calculate one big table
+            {
+#ifdef DBG_WAVETABLES_BASIC
+                printf("WT: MW generating new tensor of %d waves each (mode %s)...\n",
+                       (int)size_semantics, mode_str);
+#endif
+                assert(freqs_array);
+                assert(sem_array);
+
+                const Shape2 tensorShape{size_semantics,
+                                         (tensor_size_t)synth.oscilsize};
+                Tensor2<WaveTable::float32>* newTensor =
+                    new Tensor2<WaveTable::float32>(tensorShape);
+
+                for(tensor_size_t s = 0; s < size_semantics; ++s)
+                {
+                    WaveTable::float32* data = oscilGen->calculateWaveTableData(
+                        freqs_array[job], sem_array[s], wtMode, params.presonance);
+                    (*newTensor)[s].take_data_and_own_it(data);
+                }
+
+#ifdef DBG_WAVETABLES
+                printf("WT: MW sending tensor at freq %d\n", (int)job);
+#endif
+                calculatedTables[job].tensor = newTensor;
+                calculatedTables[job].freq_idx = job;
+            }
         }
     }
+
+    void calculateWaveTablesIfPossible()
+    {
+        if(!wtGenThreads.size())
+            wtGenThreads.resize(/*std::thread::hardware_concurrency()*/1);
+/*      if(wtGenThreads)
+        {
+            if(!calcsLeft) // atomic variable
+            {
+                // TODO: send vector
+                // TODO: make vector empty
+                waveTablesToGenerate.pop();
+                wtGenThread.reset(nullptr);
+            }
+        }
+        else*/
+        {
+            if(wt_queue_age < wt_queue_max_age)
+            {
+                ++wt_queue_age;
+                return;
+            }
+            else
+            {
+                wt_queue_age = 0;
+            }
+
+            while(!waveTablesToGenerate.empty())
+            {
+                waveTablesToGenerateStruct& params = waveTablesToGenerate.front();
+
+                if(waveTableRequestHandler.isParamChangeUpToDate(
+                    params.part, params.kit, params.voice, params.isModOsc,
+                    params.param_change_time))
+                {
+                    OscilGen* oscilGen = getOscilGen(params);
+
+                    wavetable_types::WtMode wtMode;
+                    // hack:
+                    const WaveTable::float32* freqs_array = nullptr;
+                    const WaveTable::IntOrFloat* sem_array = nullptr;
+                    std::size_t size_freqs, size_semantics;
+                    if(params.wave_requests.size())
+                    {
+                        wtMode = wavetable_types::WtMode::freqseed_smps;
+                    }
+                    else
+                    // if no wave requests, this means generate a completely new
+                    // wavetable
+                    {
+                        Tensor1<WaveTable::float32>* unused_freqs; // non-constant
+                        Tensor1<WaveTable::IntOrFloat>* unused_semantics;
+                        wtMode = oscilGen->calculateWaveTableMode(params.isWtMod);
+                        std::tie(unused_freqs, unused_semantics) = oscilGen->calculateWaveTableScales(wtMode, params.presonance != 0);
+                        // hack: pointing to these arrays is OK, because the swap
+                        // in ADnoteParameters will not touch the array
+                        // (and it will not get deleted until MW has delivered a
+                        // further Tensor)
+                        freqs_array = unused_freqs->data();
+                        sem_array = unused_semantics->data();
+                        size_freqs = unused_freqs->size();
+                        size_semantics = unused_semantics->size();
+
+                        // possible optimization: no allocations when sizes don't change
+                        // but this might complicate the code
+                        WaveTable* newWt = new WaveTable(unused_semantics->size(), unused_freqs->size());
+                        newWt->setMode(wtMode);
+                        newWt->swapFreqsInitially(*unused_freqs);
+                        newWt->swapSemanticsInitially(*unused_semantics);
+                        newWt->setChangeStamp(oscilGen->change_stamp());
+
+                        delete unused_freqs;
+                        delete unused_semantics;
+                        const WaveTable* wt = newWt; // from now, kept const in this function
+
+                        // send Tensor3, it does not contain any buffers yet
+                        // no snoop ports, send this directly to RT
+                        uToB->write((params.voicePath + "set-wavetable").c_str(),
+                                    params.isModOsc ? "Tb" : "Fb", sizeof(WaveTable*), (uint8_t*)&wt);
+
+#ifdef DBG_WAVETABLES
+                        printf("WT: MW generated new scales, sizes: %d %d\n", (int)wt->size_freqs(), (int)wt->size_semantics());
+#endif
+                    }
+
+#ifdef DBG_WAVETABLES
+                    printf("WT: MW must generate: %s (mod-osc: %s), resonance %d\n",
+                        params.voicePath.c_str(), params.isModOsc ? "true":"false", params.presonance);
+#endif
+                    assert(!params.isModOsc || params.presonance == 0);
+
+                    std::size_t calcsToBeDone = params.wave_requests.size()
+                                              ? params.wave_requests.size()
+                                              : size_freqs;
+                    calculatedTables.resize(calcsToBeDone);
+
+                    MiddleWareImpl* this_ptr = this;
+                    auto thread_cb = [calcsToBeDone, this_ptr, params,
+                                      oscilGen, wtMode,
+                                      size_semantics, freqs_array, sem_array](
+                                      std::size_t nthreads, std::size_t threadno)
+                    {
+                        for(std::size_t job = threadno; job < calcsToBeDone; job+=nthreads)
+                        {
+                            this_ptr->calculateWavetables(params, job, oscilGen, wtMode, size_semantics, freqs_array, sem_array);
+                        }
+                    };
+
+                    for(std::size_t t = 0; t < wtGenThreads.size(); ++t)
+                        //wtGenThreads[t] = std::make_unique<std::thread>(thread_cb, wtGenThreads.size(), t); // TODO: C++14
+                        wtGenThreads[t].reset(new std::thread(thread_cb, wtGenThreads.size(), t));
+                    for(std::unique_ptr<std::thread>& thrd : wtGenThreads)
+                    {
+                        thrd->join();
+                        thrd.reset(nullptr);
+                    }
+
+                    for(wtResult& m_result : calculatedTables)
+                    {
+                        if(params.wave_requests.size())
+                        {
+                            uToB->write((params.voicePath + "set-waves").c_str(), params.isModOsc ? "Tiiib" : "Fiiib",
+                                         params.param_change_time, m_result.freq_idx, m_result.sem_idx, sizeof(Tensor1<WaveTable::float32>*), (uint8_t*)&m_result.tensor);
+                        }
+                        else
+                        {
+                            uToB->write((params.voicePath + "set-waves").c_str(), params.isModOsc ? "Tiib" : "Fiib",
+                                        params.param_change_time, m_result.freq_idx, sizeof(Tensor2<WaveTable::float32>*), (uint8_t*)&m_result.tensor);
+                        }
+                    }
+
+                }
+                else {
+#ifdef DBG_WAVETABLES
+                    printf("WT: MW dropping outdated WT request %d\n",params.param_change_time);
+#endif
+                }
+                waveTablesToGenerate.pop();
+            }
+
+        }
+    }
+
+    /*
+     * end of wavetable code
+     */
 
     void tick(void)
     {
@@ -1214,7 +1299,7 @@ public:
         }
         else
         {
-            calculateWavetables();
+            calculateWaveTablesIfPossible();
         }
     }
 
@@ -2405,7 +2490,6 @@ MiddleWareImpl::MiddleWareImpl(MiddleWare *mw, SYNTH_T synth_,
 
 MiddleWareImpl::~MiddleWareImpl(void)
 {
-
     if(server)
         lo_server_free(server);
 

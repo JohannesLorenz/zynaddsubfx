@@ -491,7 +491,7 @@ public:
     }
 };
 
-wavetable_types::WtMode OscilGen::calculateWaveTableMode(bool forceWtMode, bool isExternal)
+wavetable_types::WtMode OscilGen::calculateWaveTableMode(bool forceWtMode) const
 {
     using WtMode = wavetable_types::WtMode;
     if(forceWtMode)
@@ -504,6 +504,21 @@ wavetable_types::WtMode OscilGen::calculateWaveTableMode(bool forceWtMode, bool 
     }
 }
 
+std::size_t OscilGen::calculateNumFreqs(bool voice_uses_reso) const
+{
+    return (voice_uses_reso && res && res->Penabled) ? 128 : WaveTable::num_freqs;
+}
+
+std::size_t OscilGen::calculateNumSemantics(wavetable_types::WtMode wtMode) const
+{
+    using WtMode = wavetable_types::WtMode;
+    return wtMode == WtMode::freqwave_smps
+                                 ? WaveTable::num_semantics_wtmod
+                                 : (wtMode == WtMode::freqseed_smps)
+                                   ? WaveTable::num_semantics : 1;
+}
+
+
 std::pair<Tensor1<wavetable_types::float32>*, Tensor1<wavetable_types::IntOrFloat>*> OscilGen::calculateWaveTableScales(
     wavetable_types::WtMode wtMode, bool voice_uses_reso) const
 {
@@ -512,11 +527,8 @@ std::pair<Tensor1<wavetable_types::float32>*, Tensor1<wavetable_types::IntOrFloa
     using WtMode = wavetable_types::WtMode;
 
     {
-        std::size_t freq_sz = (voice_uses_reso && res && res->Penabled) ? 128 : WaveTable::num_freqs;
-        std::size_t sem_sz = wtMode == WtMode::freqwave_smps
-                             ? WaveTable::num_semantics_wtmod
-                             : (wtMode == WtMode::freqseed_smps)
-                               ? WaveTable::num_semantics : 1;
+        std::size_t freq_sz = calculateNumFreqs(voice_uses_reso);
+        std::size_t sem_sz = calculateNumSemantics(wtMode);
 
         freqs = new Tensor1<wavetable_types::float32>(freq_sz);
         semantics = new Tensor1<wavetable_types::IntOrFloat>(sem_sz);
