@@ -315,6 +315,10 @@ struct ADnoteVoiceParam {
     unsigned char   PFMAmpEnvelopeEnabled;
     EnvelopeParams *FMAmpEnvelope;
 
+    /* Wavetable Modulation Envelope */
+    unsigned char   PWaveEnvelopeEnabled;
+    EnvelopeParams *WaveEnvelope;
+
     unsigned char *GlobalPDetuneType;
 
     const AbsTime *time;

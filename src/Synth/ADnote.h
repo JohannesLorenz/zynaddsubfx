@@ -274,6 +274,7 @@ class ADnote:public SynthNote
 
             Envelope *FMFreqEnvelope;
             Envelope *FMAmpEnvelope;
+            Envelope *WaveEnvelope;
 
             /********************************************************/
             /*    INTERNAL VALUES OF THE NOTE AND OF THE VOICES     */
@@ -318,7 +319,8 @@ class ADnote:public SynthNote
 
             //used to compute and interpolate the amplitudes of voices and modullators
             float oldamplitude, newamplitude,
-                  FMoldamplitude, FMnewamplitude;
+                  FMoldamplitude, FMnewamplitude,
+                  WAVEoldPar, WAVEnewPar;
 
             //used by Frequency Modulation (for integration)
             float *FMoldsmp;

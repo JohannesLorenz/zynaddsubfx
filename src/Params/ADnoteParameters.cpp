@@ -49,6 +49,7 @@ static const Ports voicePorts = {
     rRecurp(FilterEnvelope, "Filter Envelope"),
     rRecurp(FMFreqEnvelope, "Modulator Frequency Envelope"),
     rRecurp(FMAmpEnvelope,  "Modulator Amplitude Envelope"),
+    rRecurp(WaveEnvelope,  "Wavetable Modulation Envelope"),
     rRecurp(VoiceFilter,    "Optional Voice Filter"),
 
 //    rToggle(Enabled,       rShort("enable"), "Voice Enable"),
@@ -196,6 +197,8 @@ static const Ports voicePorts = {
             "Modulator Frequency Envelope"),
     rToggle(PFMAmpEnvelopeEnabled,   rShort("enable"), rDefault(false),
             "Modulator Amplitude Envelope"),
+    rToggle(PWaveEnvelopeEnabled,   rShort("enable"), rDefault(false),
+            "Wavetable Modulation Envelope"),
     {"PFMEnabled::i:c:S",rProp(parameter) rProp(enumerated)
         rShort("mode") rOptions(none, mix, ring, phase,
         frequency, pulse, wave) rLinear(0,127) rDefault(none) "Modulator mode", NULL,
@@ -851,6 +854,7 @@ void ADnoteVoiceParam::defaults()
     PFMDetuneType   = 0;
     PFMFreqEnvelopeEnabled   = 0;
     PFMAmpEnvelopeEnabled    = 0;
+    PWaveEnvelopeEnabled    = 0;
     PFMVelocityScaleFunction = 64;
 
     OscilGn->defaults();
@@ -868,6 +872,7 @@ void ADnoteVoiceParam::defaults()
 
     FMFreqEnvelope->defaults();
     FMAmpEnvelope->defaults();
+    WaveEnvelope->defaults();
 
     // compute wavetables without allocating them again
     // in case of non wavetable mode, all buffers will be filled with zeroes to
@@ -910,6 +915,8 @@ void ADnoteVoiceParam::enable(const SYNTH_T &synth, FFTwrapper *fft,
     FMFreqEnvelope->init(ad_voice_fm_freq);
     FMAmpEnvelope = new EnvelopeParams(64, 1, time);
     FMAmpEnvelope->init(ad_voice_fm_amp);
+    WaveEnvelope = new EnvelopeParams(64, 1, time);
+    WaveEnvelope->init(ad_voice_fm_wave);
 
     table = OscilGn->allocWaveTable();
     tableMod = FmGn->allocWaveTable();
@@ -971,6 +978,7 @@ void ADnoteVoiceParam::kill()
 
     delete FMFreqEnvelope;
     delete FMAmpEnvelope;
+    delete WaveEnvelope;
 }
 
 
@@ -1136,6 +1144,15 @@ void ADnoteVoiceParam::add2XML(XMLwrapper& xml, bool fmoscilused)
             FMAmpEnvelope->add2XML(xml);
             xml.endbranch();
         }
+
+        xml.addparbool("wave_envelope_enabled",
+                        PFMAmpEnvelopeEnabled);
+        if((PWaveEnvelopeEnabled != 0) || (!xml.minimal)) {
+            xml.beginbranch("WAVE_ENVELOPE");
+            WaveEnvelope->add2XML(xml);
+            xml.endbranch();
+        }
+
         xml.beginbranch("MODULATOR");
         xml.addpar("detune", PFMDetune);
         xml.addpar("coarse_detune", PFMCoarseDetune);
@@ -1442,8 +1459,10 @@ void ADnoteVoiceParam::paste(ADnoteVoiceParam &a)
     copy(PFMVelocityScaleFunction);
 
     copy(PFMAmpEnvelopeEnabled);
+    copy(PWaveEnvelopeEnabled);
 
     RCopy(FMAmpEnvelope);
+    RCopy(WaveEnvelope);
 
     copy(PFMDetune);
     copy(PFMCoarseDetune);
@@ -1640,6 +1659,14 @@ void ADnoteVoiceParam::getfromXML(XMLwrapper& xml, unsigned nvoice)
                                                 PFMAmpEnvelopeEnabled);
         if(xml.enterbranch("AMPLITUDE_ENVELOPE")) {
             FMAmpEnvelope->getfromXML(xml);
+            xml.exitbranch();
+        }
+
+        PFMAmpEnvelopeEnabled = xml.getparbool("wave_envelope_enabled",
+                                                PWaveEnvelopeEnabled);
+
+        if(xml.enterbranch("WAVE_ENVELOPE")) {
+            WaveEnvelope->getfromXML(xml);
             xml.exitbranch();
         }
 
