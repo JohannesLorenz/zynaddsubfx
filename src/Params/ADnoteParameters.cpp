@@ -49,7 +49,7 @@ static const Ports voicePorts = {
     rRecurp(FilterEnvelope, "Filter Envelope"),
     rRecurp(FMFreqEnvelope, "Modulator Frequency Envelope"),
     rRecurp(FMAmpEnvelope,  "Modulator Amplitude Envelope"),
-    rRecurp(WaveEnvelope,  "Wavetable Modulation Envelope"),
+    rRecurp(WaveEnvelope,   "Wavetable Modulation Envelope"),
     rRecurp(VoiceFilter,    "Optional Voice Filter"),
 
 //    rToggle(Enabled,       rShort("enable"), "Voice Enable"),
@@ -1662,7 +1662,7 @@ void ADnoteVoiceParam::getfromXML(XMLwrapper& xml, unsigned nvoice)
             xml.exitbranch();
         }
 
-        PFMAmpEnvelopeEnabled = xml.getparbool("wave_envelope_enabled",
+        PWaveEnvelopeEnabled = xml.getparbool("wave_envelope_enabled",
                                                 PWaveEnvelopeEnabled);
 
         if(xml.enterbranch("WAVE_ENVELOPE")) {
