@@ -878,8 +878,7 @@ void ADnote::legatonote(const LegatoParams &lpars)
             vce.FMnewamplitude *=
                 NoteVoicePar[nvoice].FMAmpEnvelope->envout_dB();
 
-        vce.WAVEnewPar = NoteVoicePar[nvoice].FMVolume
-                                 * ctl.fmamp.relamp;
+        vce.WAVEnewPar = NoteVoicePar[nvoice].FMVolume;
 
         if(pars.VoicePar[nvoice].PWaveEnvelopeEnabled
            && NoteVoicePar[nvoice].WaveEnvelope)
@@ -1156,7 +1155,7 @@ void ADnote::initparameters(WatchManager *wm, const char *prefix)
             vce.FMnewamplitude *= vce.FMAmpEnvelope->envout_dB();
         }
 
-        vce.WAVEnewPar = vce.FMVolume * ctl.fmamp.relamp;
+        vce.WAVEnewPar = vce.FMVolume;
 
         if(param.PWaveEnvelopeEnabled) {
             vce.WaveEnvelope =
@@ -1393,11 +1392,11 @@ void ADnote::computecurrentparameters()
 
                 if(NoteVoicePar[nvoice].FMEnabled == FMTYPE::WAVE_MOD) {
                     vce.WAVEoldPar = vce.WAVEnewPar;
-                    vce.WAVEnewPar = NoteVoicePar[nvoice].FMVolume
-                                             * ctl.fmamp.relamp;
-                    if(NoteVoicePar[nvoice].WaveEnvelope)
-                        vce.WAVEnewPar *=
-                            (NoteVoicePar[nvoice].WaveEnvelope->envout()+40.0f)*0.025f;
+                    vce.WAVEnewPar = NoteVoicePar[nvoice].FMVolume *
+                      ((NoteVoicePar[nvoice].WaveEnvelope) ?
+                      (NoteVoicePar[nvoice].WaveEnvelope->envout()+40.0f)*0.025f :
+                      ctl.fmamp.relamp);
+
                 }
 
             }
@@ -1896,7 +1895,7 @@ inline void ADnote::ComputeVoiceOscillatorWaveTableModulation(int nvoice, FMTYPE
 
     //do the modulation
     for(int k = 0; k < vce.unison_size; ++k) {
-        float *smps   = NoteVoicePar[nvoice].OscilSmp.smps;
+        //~ float *smps   = NoteVoicePar[nvoice].OscilSmp.smps;
         float *tw     = tmpwave_unison[k];
         int    poshi  = vce.oscposhi[k];
         int    poslo  = (int)(vce.oscposlo[k] * (1<<24));
