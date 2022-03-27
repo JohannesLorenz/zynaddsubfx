@@ -1146,7 +1146,7 @@ void ADnoteVoiceParam::add2XML(XMLwrapper& xml, bool fmoscilused)
         }
 
         xml.addparbool("wave_envelope_enabled",
-                        PFMAmpEnvelopeEnabled);
+                        PWaveEnvelopeEnabled);
         if((PWaveEnvelopeEnabled != 0) || (!xml.minimal)) {
             xml.beginbranch("WAVE_ENVELOPE");
             WaveEnvelope->add2XML(xml);
