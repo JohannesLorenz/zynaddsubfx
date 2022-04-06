@@ -1824,68 +1824,68 @@ inline void ADnote::ComputeVoiceOscillatorFrequencyModulation(int nvoice,
  */
 inline void ADnote::ComputeVoiceOscillatorWaveTableModulation(int nvoice, FMTYPE FMmode)
 {
-  Voice& vce = NoteVoicePar[nvoice];
-  if(!pars.VoicePar[nvoice].PWaveEnvelopeEnabled)
-  {
     Voice& vce = NoteVoicePar[nvoice];
-    if(NoteVoicePar[nvoice].FMVoice >= 0) {
-        //if I use VoiceOut[] as modulator
-        for(int k = 0; k < vce.unison_size; ++k) {
-            float *tw = tmpwave_unison[k];
-            const float *smps = NoteVoicePar[NoteVoicePar[nvoice].FMVoice].VoiceOut;
-            if (FMmode == FMTYPE::PW_MOD && (k & 1))
-                for (int i = 0; i < synth.buffersize; ++i)
-                    tw[i] = -smps[i];
-            else
-                memcpy(tw, smps, synth.bufferbytes);
-        }
-    } else {
-        //Compute the modulator and store it in tmpwave_unison[][]
-        for(int k = 0; k < vce.unison_size; ++k) {
-            int    poshiFM  = vce.oscposhiFM[k];
-            int    posloFM  = (int)(vce.oscposloFM[k]  * (1<<24));
-            int    freqhiFM = vce.oscfreqhiFM[k];
-            int    freqloFM = (int)(vce.oscfreqloFM[k] * (1<<24));
-            float *tw = tmpwave_unison[k];
-            const float *smps = NoteVoicePar[nvoice].FMSmp;
-
-            for(int i = 0; i < synth.buffersize; ++i) {
-                tw[i] = (smps[poshiFM] * ((1<<24) - posloFM)
-                         + smps[poshiFM + 1] * posloFM) / (1.0f*(1<<24));
+    if(!pars.VoicePar[nvoice].PWaveEnvelopeEnabled)
+    {
+        Voice& vce = NoteVoicePar[nvoice];
+        if(NoteVoicePar[nvoice].FMVoice >= 0) {
+            //if I use VoiceOut[] as modulator
+            for(int k = 0; k < vce.unison_size; ++k) {
+                float *tw = tmpwave_unison[k];
+                const float *smps = NoteVoicePar[NoteVoicePar[nvoice].FMVoice].VoiceOut;
                 if (FMmode == FMTYPE::PW_MOD && (k & 1))
-                    tw[i] = -tw[i];
-
-                posloFM += freqloFM;
-                if(posloFM >= (1<<24)) {
-                    posloFM &= 0xffffff;//fmod(posloFM, 1.0f);
-                    poshiFM++;
-                }
-                poshiFM += freqhiFM;
-                poshiFM &= synth.oscilsize - 1;
+                    for (int i = 0; i < synth.buffersize; ++i)
+                        tw[i] = -smps[i];
+                else
+                    memcpy(tw, smps, synth.bufferbytes);
             }
-            vce.oscposhiFM[k] = poshiFM;
-            vce.oscposloFM[k] = posloFM/((1<<24)*1.0f);
+        } else {
+            //Compute the modulator and store it in tmpwave_unison[][]
+            for(int k = 0; k < vce.unison_size; ++k) {
+                int    poshiFM  = vce.oscposhiFM[k];
+                int    posloFM  = (int)(vce.oscposloFM[k]  * (1<<24));
+                int    freqhiFM = vce.oscfreqhiFM[k];
+                int    freqloFM = (int)(vce.oscfreqloFM[k] * (1<<24));
+                float *tw = tmpwave_unison[k];
+                const float *smps = NoteVoicePar[nvoice].FMSmp;
+
+                for(int i = 0; i < synth.buffersize; ++i) {
+                    tw[i] = (smps[poshiFM] * ((1<<24) - posloFM)
+                             + smps[poshiFM + 1] * posloFM) / (1.0f*(1<<24));
+                    if (FMmode == FMTYPE::PW_MOD && (k & 1))
+                        tw[i] = -tw[i];
+
+                    posloFM += freqloFM;
+                    if(posloFM >= (1<<24)) {
+                        posloFM &= 0xffffff;//fmod(posloFM, 1.0f);
+                        poshiFM++;
+                    }
+                    poshiFM += freqhiFM;
+                    poshiFM &= synth.oscilsize - 1;
+                }
+                vce.oscposhiFM[k] = poshiFM;
+                vce.oscposloFM[k] = posloFM/((1<<24)*1.0f);
+            }
         }
-    }
-    // Amplitude interpolation
-    if(ABOVE_AMPLITUDE_THRESHOLD(vce.FMoldamplitude,
-                                 vce.FMnewamplitude)) {
-        for(int k = 0; k < vce.unison_size; ++k) {
-            float *tw = tmpwave_unison[k];
-            for(int i = 0; i < synth.buffersize; ++i)
-                tw[i] *= INTERPOLATE_AMPLITUDE(vce.FMoldamplitude,
-                                               vce.FMnewamplitude,
-                                               i,
-                                               synth.buffersize);
+        // Amplitude interpolation
+        if(ABOVE_AMPLITUDE_THRESHOLD(vce.FMoldamplitude,
+                                     vce.FMnewamplitude)) {
+            for(int k = 0; k < vce.unison_size; ++k) {
+                float *tw = tmpwave_unison[k];
+                for(int i = 0; i < synth.buffersize; ++i)
+                    tw[i] *= INTERPOLATE_AMPLITUDE(vce.FMoldamplitude,
+                                                   vce.FMnewamplitude,
+                                                   i,
+                                                   synth.buffersize);
+            }
+        } else {
+            for(int k = 0; k < vce.unison_size; ++k) {
+                float *tw = tmpwave_unison[k];
+                for(int i = 0; i < synth.buffersize; ++i)
+                    tw[i] *= vce.FMnewamplitude;
+            }
         }
-    } else {
-        for(int k = 0; k < vce.unison_size; ++k) {
-            float *tw = tmpwave_unison[k];
-            for(int i = 0; i < synth.buffersize; ++i)
-                tw[i] *= vce.FMnewamplitude;
-        }
-    }
-  } // end of Compute the modulator
+    } // end of Compute the modulator
 
     // WaveTable-specific code begins here
     assert(vce.OscilSmp.isWaveTable);
@@ -1895,7 +1895,6 @@ inline void ADnote::ComputeVoiceOscillatorWaveTableModulation(int nvoice, FMTYPE
 
     //do the modulation
     for(int k = 0; k < vce.unison_size; ++k) {
-        //~ float *smps   = NoteVoicePar[nvoice].OscilSmp.smps;
         float *tw     = tmpwave_unison[k];
         int    poshi  = vce.oscposhi[k];
         int    poslo  = (int)(vce.oscposlo[k] * (1<<24));
