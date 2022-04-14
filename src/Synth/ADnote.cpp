@@ -1815,7 +1815,8 @@ inline void ADnote::ComputeVoiceOscillatorFrequencyOrWtModulation(int nvoice, FM
                 if(pars.VoicePar[nvoice].PWaveEnvelopeEnabled)
                     par = std::max(0.0f, std::min(1.0f,
                         (INTERPOLATE_AMPLITUDE(vce.WAVEoldPar,
-                         vce.WAVEnewPar, i, synth.buffersize)) +
+                         vce.WAVEnewPar, i, synth.buffersize)) -
+                         0.5f +
                          NoteVoicePar[nvoice].basefuncpar));
                 else
                     par = std::max(0.0f, std::min(1.0f,
