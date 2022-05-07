@@ -1815,7 +1815,8 @@ inline void ADnote::ComputeVoiceOscillatorFrequencyOrWtModulation(int nvoice, FM
                 if(pars.VoicePar[nvoice].PWaveEnvelopeEnabled)
                     par = std::max(0.0f, std::min(1.0f,
                         (INTERPOLATE_AMPLITUDE(vce.WAVEoldPar,
-                         vce.WAVEnewPar, i, synth.buffersize)) +
+                         vce.WAVEnewPar, i, synth.buffersize)) -
+                         0.5f +
                          NoteVoicePar[nvoice].basefuncpar));
                 else
                     par = std::max(0.0f, std::min(1.0f,
@@ -1845,8 +1846,6 @@ inline void ADnote::ComputeVoiceOscillatorFrequencyOrWtModulation(int nvoice, FM
                 tw[i] = (1.0f - semantic_fractional) * twA + semantic_fractional * twB;
 
                 //printf("%f %f [%d,%d]: %f %f -> %f\n",freq,semantic,(int)poshi,(int)poslo,twA,twB, tw[i]);
-
-                tw[i] *= 0.5f;
             }
             else // not wave mode, i.e. FM, PM, PWM
             {
