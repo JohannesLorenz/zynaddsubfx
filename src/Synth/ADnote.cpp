@@ -883,12 +883,8 @@ void ADnote::legatonote(const LegatoParams &lpars)
 
         if(pars.VoicePar[nvoice].PWaveEnvelopeEnabled
            && NoteVoicePar[nvoice].WaveEnvelope) {
-            if(pars.VoicePar[nvoice].WaveEnvelope->Plinearenvelope==0)
-                vce.WAVEnewPar *=
-                    ((NoteVoicePar[nvoice].WaveEnvelope->envout()+40.0f)*0.025f);
-            else
-                vce.WAVEnewPar *=
-                    (NoteVoicePar[nvoice].WaveEnvelope->envout());
+            vce.WAVEnewPar *=
+                (NoteVoicePar[nvoice].WaveEnvelope->envout());
         }
     }
 
@@ -1168,13 +1164,9 @@ void ADnote::initparameters(WatchManager *wm, const char *prefix)
                 memory.alloc<Envelope>(*param.WaveEnvelope,
                         basefreq, synth.dt(), wm,
                         (pre+"VoicePar"+nvoice+"/WaveEnvelope/").c_str);
-        
-            if(pars.VoicePar[nvoice].WaveEnvelope->Plinearenvelope==0)
-                vce.WAVEnewPar *=
-                    ((vce.WaveEnvelope->envout()+40.0f)*0.025f);
-            else
-                vce.WAVEnewPar *=
-                    (vce.WaveEnvelope->envout());
+
+            vce.WAVEnewPar *=
+                (vce.WaveEnvelope->envout());
         }
     }
 
@@ -1406,10 +1398,7 @@ void ADnote::computecurrentparameters()
                     vce.WAVEoldPar = vce.WAVEnewPar;
                     vce.WAVEnewPar = NoteVoicePar[nvoice].FMVolume *
                       ((NoteVoicePar[nvoice].WaveEnvelope) ?
-                      ( (pars.VoicePar[nvoice].WaveEnvelope->Plinearenvelope==0) ? 
-                        (NoteVoicePar[nvoice].WaveEnvelope->envout()+40.0f)*0.025f:
-                        NoteVoicePar[nvoice].WaveEnvelope->envout()
-                      ) :
+                        NoteVoicePar[nvoice].WaveEnvelope->envout() :
                       ctl.fmamp.relamp);
 
                 }
@@ -1830,8 +1819,7 @@ inline void ADnote::ComputeVoiceOscillatorFrequencyOrWtModulation(int nvoice, FM
                 if(pars.VoicePar[nvoice].PWaveEnvelopeEnabled)
                     par = std::max(0.0f, std::min(1.0f,
                         (INTERPOLATE_AMPLITUDE(vce.WAVEoldPar,
-                         vce.WAVEnewPar, i, synth.buffersize)) -
-                         0.5f +
+                         vce.WAVEnewPar, i, synth.buffersize)) +
                          NoteVoicePar[nvoice].basefuncpar));
                 else
                     par = std::max(0.0f, std::min(1.0f,
