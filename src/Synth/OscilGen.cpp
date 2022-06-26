@@ -659,15 +659,22 @@ WaveTable *OscilGen::allocWaveTable() const
 
 void OscilGen::recalculateDefaultWaveTable(WaveTable * wt) const
 {
-    wt->setMode(WaveTable::WtMode::freq_smps);
-    wt->setFreq(0, 55.f);
-    wt->setSemantic(0, wavetable_types::IntOrFloat{.intVal=0});
+    if(wt->write_space_semantics(0))
+    {
+        wt->setMode(WaveTable::WtMode::freq_smps);
+        wt->setFreq(0, 55.f);
+        wt->setSemantic(0, wavetable_types::IntOrFloat{.intVal=0});
 
-    // no FFT/IFFT required, it's a simple sine
-    // (the currently selected base function is still sine)
-    for(int k = 0; k < synth.oscilsize; ++k) {
-        wt->setDataAt(0,0,(tensor_size_t)k,
-            -sinf(2.0f * PI * (float)k / (float)synth.oscilsize));
+        wt->inc_write_pos_semantics(0, 1);
+        // no FFT/IFFT required, it's a simple sine
+        // (the currently selected base function is still sine)
+        for(int k = 0; k < synth.oscilsize; ++k) {
+            wt->setDataAt(0,0,(tensor_size_t)k,
+                -sinf(2.0f * PI * (float)k / (float)synth.oscilsize));
+        }
+        wt->inc_write_pos_delayed_semantics(0, 1);
+    } else {
+        // already calculated
     }
 }
 

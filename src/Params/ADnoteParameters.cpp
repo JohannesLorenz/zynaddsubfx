@@ -474,7 +474,16 @@ static const Ports voicePorts = {
                    (int)sem_idx, (int)freq_idx);
 #endif
             // ignore outdated param changes, allow the rest:
-            if(!fromParamChange || current->is_correct_timestamp(paramChangeTime))
+            if(fromParamChange && !current->is_correct_timestamp(paramChangeTime))
+            {
+                puts("incorrect timestamp!");
+                if(sem_idx == all_semantics())
+                    d.reply("/free", "sb", "Tensor2<WaveTable::float32>", sizeof(Tensor2<WaveTable::float32>*), &waves2);
+                else
+                    d.reply("/free", "sb", "Tensor1<WaveTable::float32>", sizeof(Tensor1<WaveTable::float32>*), &waves1);
+
+            }
+            else
             {
                 if(// no write position => fill all semantics at this frequency
                    (sem_idx == all_semantics() && wt->write_pos_delayed_semantics(freq_idx) == 0) ||
