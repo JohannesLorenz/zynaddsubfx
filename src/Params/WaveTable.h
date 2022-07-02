@@ -315,9 +315,9 @@ public:
         std::swap(m_data, other.m_data);
     }
 
-    void take_data_and_own_it(T* new_data)
+    void swapDataWith(T*& new_data)
     {
-        m_data = new_data;
+        std::swap(m_data, new_data);
     }
 
     class TensorIterator
@@ -362,8 +362,8 @@ public:
  */
 
 /**
-    Ringbuffer without buffer - only size, reader and writer
-    (and delayed writer)
+    Ringbuffer without buffer. Only size, reader and writer
+    (and delayed writer).
     @invariant r <= w_delayed <= w (non-cyclic)
     @invariant r <= w + m_size (non-cyclic)
 

@@ -1242,7 +1242,8 @@ public:
             Tensor1<WaveTable::float32>* newTensor = new Tensor1<WaveTable::float32>(synth.oscilsize);
             WaveTable::float32* data = oscilGen->calculateWaveTableData(
                 wave_req.freq, wave_req.sem, wtMode, params.presonance, bufs);
-            newTensor->take_data_and_own_it(data);
+            newTensor->swapDataWith(data);
+            delete[] data;
 
             calculatedTables[job].tensor = newTensor;
             calculatedTables[job].freq_idx = wave_req.freq_idx;
@@ -1266,7 +1267,8 @@ public:
             {
                 WaveTable::float32* data = oscilGen->calculateWaveTableData(
                     freqs_array[job], sem_array[s], wtMode, params.presonance, bufs);
-                (*newTensor)[s].take_data_and_own_it(data);
+                (*newTensor)[s].swapDataWith(data);
+                delete[] data;
             }
 
 #ifdef DBG_WAVETABLES
