@@ -795,7 +795,8 @@ void OscilGen::changebasefunction(OscilGenBuffers& bfrs, float differingBaseFunc
         clearAll(bfrs.basefuncFFTfreqs.data, synth.oscilsize);
     bfrs.oscilprepared = 0;
     bfrs.oldbasefunc   = Pcurrentbasefunc;
-    bfrs.oldbasepar    = (differingBaseFuncPar >= 0) ? differingBaseFuncPar : Pbasefuncpar;
+    // always force recomputation after we use float values
+    bfrs.oldbasepar    = (differingBaseFuncPar >= 0) ? 255 : Pbasefuncpar;
     bfrs.oldbasefuncmodulation     = Pbasefuncmodulation;
     bfrs.oldbasefuncmodulationpar1 = Pbasefuncmodulationpar1;
     bfrs.oldbasefuncmodulationpar2 = Pbasefuncmodulationpar2;
@@ -1023,7 +1024,6 @@ void OscilGen::prepare(OscilGenBuffers& bfrs, float differingBaseFuncPar) const
     prepare(bfrs, bfrs.oscilFFTfreqs, differingBaseFuncPar);
 }
 
-// TODO: float vs char everywhere!
 void OscilGen::prepare(OscilGenBuffers& bfrs, FFTfreqBuffer freqs, float differingBaseFuncPar) const
 {
     if(differingBaseFuncPar >= 0.f
