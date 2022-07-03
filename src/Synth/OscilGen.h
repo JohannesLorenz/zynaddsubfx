@@ -145,8 +145,8 @@ class OscilGen:public Presets, NoCopyNoMove
         //! Get wavetable related time stamp - used to compare the age of a WT
         //! with the age of the generating OscilGen
         unsigned change_stamp() const { return myBuffers().change_stamp(); }
-        //! This is increased on every modifying port change
-        void inc_change_stamp() { ++myBuffers().m_change_stamp; }
+        //! This is increased on every modifying change (see rChangeCb)
+        void inc_change_stamp() { myBuffers().inc_change_stamp(); }
 
         //Parameters
 

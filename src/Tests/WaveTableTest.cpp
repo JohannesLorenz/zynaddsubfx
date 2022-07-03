@@ -1,9 +1,9 @@
 /*
   ZynAddSubFX - a software synthesizer
 
-  RandTest.h - CxxTest for Pseudo-Random Number Generator
-  Copyright (C) 2009-2009 Mark McCurry
-  Author: Mark McCurry
+  WaveTableTest.cpp - Test for WaveTables
+  Copyright (C) 2020-2022 Johannes Lorenz
+  Author: Johannes Lorenz
 
   This program is free software; you can redistribute it and/or
   modify it under the terms of the GNU General Public License

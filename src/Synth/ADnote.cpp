@@ -475,13 +475,13 @@ void ADnote::setupVoiceDetune(int nvoice)
 
     Assume they are all in sync. Here is how they change:
 
-    User send ".../PFMenabled" -> sets PFMenabled
+    User sends OSC message ".../PFMenabled" -> sets PFMenabled
        ...
     Wavetable is regenerated
        ...
     New wavetable is ready : WaveTable::mode is changed
        ...
-    ADnote takes FMEnabled to match WaveTable::mode
+    ADnote takes FMEnabled to match WaveTable::mode (this function)
 */
 // #define WT_DEBUG_TRANSITIONS
 

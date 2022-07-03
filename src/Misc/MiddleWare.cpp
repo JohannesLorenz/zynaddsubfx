@@ -729,7 +729,7 @@ class MiddleWareImpl
 {
 public:
     //! Contains all info for 1 request about which wavetables have to be
-    //! generated an how
+    //! generated and how
     struct waveTablesToGenerateStruct
     {
         // WHICH OSCIL?
@@ -2685,6 +2685,7 @@ MiddleWareImpl::MiddleWareImpl(MiddleWare *mw, SYNTH_T synth_,
 
 MiddleWareImpl::~MiddleWareImpl(void)
 {
+
     if(server)
         lo_server_free(server);
 

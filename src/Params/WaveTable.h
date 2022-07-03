@@ -2,7 +2,7 @@
   ZynAddSubFX - a software synthesizer
 
   WaveTable.h - WaveTable declarations
-  Copyright (C) 2020-2020 Johannes Lorenz
+  Copyright (C) 2020-2022 Johannes Lorenz
   Author: Johannes Lorenz
 
   This program is free software; you can redistribute it and/or
