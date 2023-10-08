@@ -1455,6 +1455,7 @@ inline void ADnote::ComputeVoiceOscillatorRingModulation(int nvoice)
         }
 }
 
+#define ADNOTE_DEBUG
 /*
  * Computes the Oscillator (Phase Modulation or Frequency Modulation)
  */
@@ -1501,6 +1502,16 @@ inline void ADnote::ComputeVoiceOscillatorFrequencyModulation(int nvoice,
             vce.oscposloFM[k] = posloFM/((1<<24)*1.0f);
         }
     }
+#ifdef ADNOTE_DEBUG
+    for(int k = 0; k < vce.unison_size; ++k) {
+        for (int i = 0; i < synth.buffersize; ++i) {
+            //tmpwave_unison[k][i] = 0.5f * ( 1.f + tmpwave_unison[k][i] );
+            assert(tmpwave_unison[k][i] >= -1.0);
+            assert(tmpwave_unison[k][i] <=  1.0);
+        }
+    }
+#endif
+
     // Amplitude interpolation
     if(ABOVE_AMPLITUDE_THRESHOLD(vce.FMoldamplitude,
                                  vce.FMnewamplitude)) {
@@ -1519,7 +1530,6 @@ inline void ADnote::ComputeVoiceOscillatorFrequencyModulation(int nvoice,
                 tw[i] *= vce.FMnewamplitude;
         }
     }
-
 
     //normalize: makes all sample-rates, oscil_sizes to produce same sound
     if(FMmode == FMTYPE::FREQ_MOD) { //Frequency modulation
