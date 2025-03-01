@@ -1,5 +1,6 @@
 #include <cstring>
 #include <ostream>
+#include <rtosc/default-value.h>
 #include <rtosc/ports.h>
 #include <set>
 #include <string>
@@ -135,7 +136,7 @@ static ostream &add_options(ostream &o, Port::MetaContainer meta)
  *   - 'domain'    : range [OPTIONAL]
  */
 static bool first = true;
-static bool do_dump(const rtosc::Port *p, const char *full_name, void *v)
+static bool do_dump(const rtosc::Port *p, const char *full_name, const char* port_name, const Ports& ports, void *v, void* runtime)
 {
     typedef std::vector<std::pair<int,string>> opts;
     std::ostream &o  = *(std::ostream*)v;
@@ -203,7 +204,7 @@ static bool do_dump(const rtosc::Port *p, const char *full_name, void *v)
     const char *min = meta["min"];
     const char *max = meta["max"];
     const char *logmin = meta["logmin"];
-    const char *def = meta["default"];
+    const char *def = rtosc::get_default_value(port_name, ports, runtime, p, 1);
     def = escape_string(def);
 
     for(auto m:meta) {
@@ -258,13 +259,13 @@ static bool do_dump(const rtosc::Port *p, const char *full_name, void *v)
     return true;
 }
 
-static void dump_param_cb(const rtosc::Port *p, const char *full_name, const char*,
-                          const Ports&,void *v, void*)
+static void dump_param_cb(const rtosc::Port *p, const char *full_name, const char* port_name,
+                          const Ports& ports,void *v, void* runtime)
 {
     static std::set<std::pair<std::string, std::string>> already_dumped;
     if(already_dumped.find(std::make_pair(full_name, p->name)) == already_dumped.end())
     {
-        bool dumped = do_dump(p, full_name, v);
+        bool dumped = do_dump(p, full_name, port_name, ports, v, runtime);
         if(dumped)
             already_dumped.emplace(full_name, p->name);
     }
