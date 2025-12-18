@@ -33,6 +33,7 @@ class FormantFilter:public Filter
         void cleanup(void);
 
     private:
+        //! set position in the formant table
         void setpos(float input);
 
 
