@@ -17,6 +17,7 @@
 class Fl_Osc_Interface;
 
 namespace rtosc {
+    struct Ports;
     struct MergePorts;
 }
 
@@ -104,6 +105,7 @@ class MiddleWare
         void discardAllbToUButHandleFree();
 
         static const rtosc::MergePorts& getAllPorts();
+        static const rtosc::Ports& getNonRtParamPorts();
 
     private:
         class MiddleWareImpl *impl;

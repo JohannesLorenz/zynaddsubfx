@@ -40,6 +40,7 @@
 #include "MsgParsing.h"
 #include "Part.h"
 #include "PresetExtractor.h"
+#include "Schema.h"
 #include "../Containers/MultiPseudoStack.h"
 #include "../Params/PresetsStore.h"
 #include "../Params/EnvelopeParams.h"
@@ -705,6 +706,8 @@ public:
         parent->transmitMsg("/load-master", "b", sizeof(Master*), &m);
         return 0;
     }
+    
+    void dumpSchema() 
 
     // Save all possible parameters
     // In user language, this is called "saving a master", but we
@@ -1872,7 +1875,7 @@ const rtosc::MergePorts allPorts =
     &Master::ports,
     &middwareSnoopPorts
 };
-const rtosc::Ports& getNonRtParamPorts() { return nonRtParamPorts; }
+const rtosc::Ports& MiddleWare::getNonRtParamPorts() { return nonRtParamPorts; }
 const rtosc::MergePorts& MiddleWare::getAllPorts() { return allPorts; }
 
 static rtosc::Ports middlewareReplyPorts = {

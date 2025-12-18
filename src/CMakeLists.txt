@@ -622,7 +622,8 @@ if(CompileTests)
 endif(CompileTests)
 
 
-add_executable(zynaddsubfx main.cpp)
+add_executable(zynaddsubfx main.cpp
+    Misc/Schema.h)
 
 if(Werror)
     if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)

@@ -271,16 +271,17 @@ static void dump_param_cb(const rtosc::Port *p, const char *full_name, const cha
     }
 }
 
-void dump_json(std::ostream &o, const rtosc::Ports &p)
+void dump_json(std::ostream &o, const rtosc::Ports &pMaster, const rtosc::Ports &pMw)
 {
     first = true;
     o << "{\n";
     o << "    \"parameter\" : [\n";
     char buffer[1024];
     memset(buffer, 0, sizeof(buffer));
-    walk_ports(&p, buffer, 1024, &o, dump_param_cb, true, nullptr, true);
+    walk_ports(&pMaster, buffer, 1024, &o, dump_param_cb, true, nullptr, true);
     o << "\n    ],\n";
     o << "    \"actions\" : [\n";
+    //planned code for action ports that do not directly correspond to a parameter
     //walk_ports2(formatter.p, buffer, 1024, &o, dump_action_cb);
     o << "    ]\n";
     o << "}";

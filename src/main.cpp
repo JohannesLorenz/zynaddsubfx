@@ -74,8 +74,6 @@ bool      compr = false; // enables output audio compressor
 namespace zyn
 {
     extern int Pexitprogram;     //if the UI set this to 1, the program will exit
-    void dump_json(std::ostream &o,
-                   const rtosc::Ports &p);
 }
 
 #if LASH
@@ -473,7 +471,7 @@ int main(int argc, char *argv[])
                 if(optarguments)
                 {
                     ofstream outfile(optarguments);
-                    dump_json(outfile, MiddleWare::getAllPorts());
+                    dump_json(outfile, Master::ports, MiddleWare::getNonRtParamPorts());
                 }
                 break;
             case 'Z':
