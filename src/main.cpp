@@ -32,7 +32,9 @@
 #include <signal.h>
 
 #ifdef ZEST_GUI
+#ifndef _WIN_32
 #include <unistd.h>
+#endif
 #endif
 #include <getopt.h>
 
