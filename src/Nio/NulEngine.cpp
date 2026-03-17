@@ -17,6 +17,7 @@
 
 #include <chrono>
 #include <iostream>
+#include <atomic>
 using namespace std;
 
 namespace zyn {
@@ -25,6 +26,13 @@ NulEngine::NulEngine(const SYNTH_T &synth_)
     :AudioOut(synth_)
 {
     name = "NULL";
+}
+
+void testfunc()
+{
+    std::atomic_flag f;
+    bool res = f.test();
+    std::cout << res << std::endl;
 }
 
 void NulEngine::AudioThread()
@@ -36,6 +44,7 @@ void NulEngine::AudioThread()
         getNext();
 
         time_point now = chrono::steady_clock::now();
+
         if(playing_until == time_point()) {
             playing_until = now;
         }
@@ -45,6 +54,11 @@ void NulEngine::AudioThread()
             if(remaining > 10ms) //Don't sleep_for() less than 10ms.
                 //This will add latency...
                 this_thread::sleep_for(remaining  - 10ms);
+        if(remaining > 10000000s) {
+            testfunc();
+	}
+
+	    
             else if(remaining < 0us) {
                 playing_until -= remaining;
                 cerr << "WARNING - too late" << endl;
